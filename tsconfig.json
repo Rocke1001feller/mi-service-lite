@@ -1,0 +1,36 @@
+{
+	"compilerOptions": {
+	  "target": "ES2018",
+	  "module": "CommonJS",
+	  "moduleResolution": "Node",
+	  "lib": [
+		"ESNext",
+		"ESNext.AsyncIterable",
+		"DOM"
+	  ],
+	  "declaration": true,
+	  "removeComments": false,
+	  "emitDecoratorMetadata": true,
+	  "experimentalDecorators": true,
+	  "sourceMap": false,
+	  "allowJs": true,
+	  "outDir": "./dist",
+	  "rootDir": "./src",
+	  // "incremental": true,
+	  // "esModuleInterop": true,
+	  // "strict": true,
+	  // "noEmit": true,
+	  "noImplicitAny": false,
+	  "skipLibCheck": true,
+	  "types": [
+		"@types/node"
+	  ]
+	},
+	"include": [
+	  "src",
+	  "@types"
+	],
+	"exclude": [
+	  "node_modules",
+	]
+  }

@@ -1,0 +1,35 @@
+{
+  "name": "mi-service",
+  "version": "1.0.1",
+  "description": "XiaoMi Cloud Service for mi.com This is a fork from https://github.com/Yonsm/MiService implemented in TypeScript.",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "tsc --watch",
+    "build": "tsc"
+  },
+  "author": "inu1255",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inu1255/mi-service.git"
+  },
+  "keywords": [
+    "xiaomi",
+    "miio"
+  ],
+  "bugs": {
+    "url": "https://github.com/inu1255/mi-service/issues"
+  },
+  "homepage": "https://github.com/inu1255/mi-service#readme",
+  "dependencies": {
+    "axios": "^1.4.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.9",
+    "typescript": "^4.5.5"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org"
+  }
+}
