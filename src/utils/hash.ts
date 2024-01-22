@@ -22,6 +22,10 @@ export function signNonce(ssecurity: string, nonce: string) {
   return m.digest().toString("base64");
 }
 
+export function uuid() {
+  return crypto.randomUUID();
+}
+
 export function randomString(len: number): string {
   if (len < 1) return "";
   let s = Math.random().toString(36).slice(2);

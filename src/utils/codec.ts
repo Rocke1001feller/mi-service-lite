@@ -3,6 +3,18 @@ import { RC4, rc4Hash } from "./rc4";
 import * as pako from "pako";
 import { jsonDecode, jsonEncode } from "./json";
 
+export function parseLoginResponse(res: string) {
+  try {
+    return (
+      jsonDecode(
+        res.replace("&&&START&&&", "").replace(/:(\d{16,})/g, ':"$1"')
+      ) ?? {}
+    );
+  } catch {
+    return {};
+  }
+}
+
 export function decodeQuery(str: string) {
   var data: any = {};
   if (!str) {

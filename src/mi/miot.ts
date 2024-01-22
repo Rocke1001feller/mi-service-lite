@@ -5,7 +5,7 @@ import { MiAccount } from "./account";
 
 // "LX06": ("5-1", "5-5"), 小爱音箱 Pro
 
-export class MiIOT { 
+export class MiIOT {
   account: MiAccount;
   server: string;
 
@@ -35,16 +35,19 @@ export class MiIOT {
       headers["Content-Type"] = "application/x-www-form-urlencoded";
       res = await Http.post(this.server + uri, encodeQuery(data), {
         headers: headers,
+        rawResponse: true,
         validateStatus: () => true,
       });
     } else {
       res = await Http.get(this.server + uri, {
         headers: headers,
+        rawResponse: true,
         validateStatus: () => true,
       });
     }
     if (typeof res.data != "string") {
-      throw res;
+      console.error("_calMiIOT failed", res);
+      return undefined;
     }
     res = await decodeMiIOT(
       this.account.ssecurity,

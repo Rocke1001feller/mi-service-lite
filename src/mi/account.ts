@@ -1,6 +1,6 @@
-import { md5, sha1 } from "../utils/hash";
+import { sha1 } from "../utils/hash";
 import { Http } from "../utils/http";
-import { encodeQuery } from "../utils/codec";
+import { encodeQuery, parseLoginResponse } from "../utils/codec";
 import { jsonDecode } from "../utils/json";
 
 export interface GetAccountOption {
@@ -21,7 +21,7 @@ export interface MiAccount {
 export async function getAccount(
   opt: GetAccountOption
 ): Promise<MiAccount | undefined> {
-  let ret = await Http.get(
+  let res = await Http.get(
     `https://account.xiaomi.com/pass/serviceLogin?sid=${opt.sid}&_json=true`,
     {
       headers: {
@@ -30,14 +30,12 @@ export async function getAccount(
         Cookie: `deviceId=${opt.deviceId}; sdkVersion=3.9`,
       },
     }
-  ).catch((e) => {
-    console.error("getAccount failed", e);
-    return undefined;
-  });
-  if (!ret) {
+  );
+  if (res.isError) {
+    console.error("login failed", res);
     return undefined;
   }
-  let resp = jsonDecode(ret.data.slice(11));
+  let resp = parseLoginResponse(res);
   if (resp.code !== 0) {
     let data = {
       _json: "true",
@@ -45,10 +43,11 @@ export async function getAccount(
       sid: resp.sid,
       _sign: resp._sign,
       callback: resp.callback,
+      cc: "+86",
       user: opt.username,
-      hash: md5(opt.password).toUpperCase(),
+      hash: opt.password,
     };
-    let ret = await Http.post(
+    res = await Http.post(
       "https://account.xiaomi.com/pass/serviceLoginAuth2",
       encodeQuery(data),
       {
@@ -56,30 +55,35 @@ export async function getAccount(
           "User-Agent":
             "APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS",
           Cookie: `deviceId=${opt.deviceId}; pass_ua=web; sdkVersion=3.9; uLocale=zh_CN`,
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         },
       }
     );
-    resp = jsonDecode(ret.data.slice(11).replace(/:(\d{16,})/g, ':"$1"'));
-    if (resp.code != 0) {
-      console.error("getAccount failed", resp);
+    if (res.isError) {
+      console.error("login failed", res);
       return undefined;
     }
+    resp = parseLoginResponse(res);
+  }
+  if (!resp.location) {
+    console.error("login failed", res);
+    return undefined;
   }
   const serviceToken = await _securityTokenService(
     resp.location,
     resp.nonce,
     resp.ssecurity
   );
-  return serviceToken
-    ? {
-        userId: resp.userId,
-        passToken: resp.passToken,
-        ssecurity: resp.ssecurity,
-        serviceToken: serviceToken,
-        deviceId: opt.deviceId,
-      }
-    : undefined;
+  if (!serviceToken) {
+    return undefined;
+  }
+  return {
+    userId: resp.userId,
+    passToken: resp.passToken,
+    ssecurity: resp.ssecurity,
+    serviceToken: serviceToken,
+    deviceId: opt.deviceId,
+  };
 }
 
 async function _securityTokenService(
@@ -91,15 +95,14 @@ async function _securityTokenService(
   const clientSign = sha1(nsec);
   const res = await Http.get(
     `${location}&clientSign=${encodeURIComponent(clientSign)}`,
-    { headers: {} }
+    { rawResponse: true }
   );
-  let cookies = res.headers["set-cookie"];
-  if (!cookies) {
-    return undefined;
-  }
+  let cookies = res.headers["set-cookie"] ?? [];
   for (let cookie of cookies) {
-    if (cookie.startsWith("serviceToken")) {
+    if (cookie.includes("serviceToken")) {
       return cookie.split(";")[0].split("=").slice(1).join("=");
     }
   }
+  console.error("_securityTokenService failed", res);
+  return undefined;
 }

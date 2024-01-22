@@ -34,7 +34,6 @@ export class MiNA {
     const requestId = "app_ios_" + randomString(30);
     if (data) {
       data["requestId"] = requestId;
-      data["deviceId"] = this.account.deviceId;
     } else {
       uri += "&requestId=" + requestId;
     }
@@ -51,19 +50,21 @@ export class MiNA {
     } else {
       res = await Http.get(url, { headers: headers });
     }
-    if (!res.data || res.data.code != 0) {
-      throw res;
+    if (res.code !== 0) {
+      console.error("_callMina failed", res);
+      return undefined;
     }
-    return res.data.data;
+    return res.data;
   }
 
-  private _callUbus(method: string, path: string, message: any) {
+  private _callUbus(
+    deviceId: string,
+    method: string,
+    path: string,
+    message: any
+  ) {
     message = jsonEncode(message);
-    return this._callMina("/remote/ubus", {
-      message,
-      method,
-      path,
-    });
+    return this._callMina("/remote/ubus", { deviceId, message, method, path });
   }
 
   getDevices(master = 0) {
@@ -71,13 +72,13 @@ export class MiNA {
   }
 
   getStatus(deviceId: string) {
-    return this._callUbus("player_get_play_status", "mediaplayer", {
+    return this._callUbus(deviceId, "player_get_play_status", "mediaplayer", {
       media: "app_ios",
     });
   }
 
   play(deviceId: string, url: string) {
-    return this._callUbus("player_play_url", "mediaplayer", {
+    return this._callUbus(deviceId, "player_play_url", "mediaplayer", {
       url: url,
       type: 1,
       media: "app_ios",
@@ -85,27 +86,27 @@ export class MiNA {
   }
 
   pause(deviceId: string) {
-    return this._callUbus("player_play_operation", "mediaplayer", {
+    return this._callUbus(deviceId, "player_play_operation", "mediaplayer", {
       action: "pause",
       media: "app_ios",
     });
   }
 
   resume(deviceId: string) {
-    return this._callUbus("player_play_operation", "mediaplayer", {
+    return this._callUbus(deviceId, "player_play_operation", "mediaplayer", {
       action: "play",
       media: "app_ios",
     });
   }
 
   tts(deviceId: string, text: string) {
-    return this._callUbus("text_to_speech", "mibrain", {
+    return this._callUbus(deviceId, "text_to_speech", "mibrain", {
       text: text,
     });
   }
 
   setVolume(deviceId: string, volume: number) {
-    return this._callUbus("player_set_volume", "mediaplayer", {
+    return this._callUbus(deviceId, "player_set_volume", "mediaplayer", {
       volume: volume,
       media: "app_ios",
     });
@@ -122,14 +123,9 @@ export class MiNA {
       Cookie: `deviceId=${deviceId}; serviceToken="${this.account.serviceToken}"; userId=${this.account.userId}`,
     };
     let url = `https://userprofile.mina.mi.com/device_profile/v2/conversation?source=dialogu&hardware=${hardware}&timestamp=${Date.now()}&limit=${limit}`;
-    const res = await Http.get(url, {
-      headers,
-    }).catch((err) => {
-      console.error("getConversations failed", err);
-      return undefined;
-    });
-    if (res?.data?.code !== 0) {
-      console.error("getConversations failed", res?.data);
+    const res = await Http.get(url, { headers });
+    if (res.code !== 0) {
+      console.error("getConversations failed", res);
       return undefined;
     }
     return jsonDecode(res?.data?.data);

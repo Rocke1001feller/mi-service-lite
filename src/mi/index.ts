@@ -1,5 +1,5 @@
 import { readJSON, writeJSON } from "../utils/io";
-import { randomString } from "../utils/hash";
+import { randomString, uuid } from "../utils/hash";
 import { MiAccount, getAccount } from "./account";
 import { MiIOT } from "./miot";
 import { MiNA } from "./mina";
@@ -18,12 +18,7 @@ export async function getMiService(opt: {
   password: string;
   deviceId?: string;
 }) {
-  const {
-    service,
-    username,
-    password,
-    deviceId = randomString(16).toUpperCase(),
-  } = opt;
+  const { service, username, password, deviceId = "wb_" + uuid() } = opt;
   let account: MiAccount | undefined;
   const store: Store = (await readJSON(".mi")) ?? {
     deviceId,
