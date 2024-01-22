@@ -1,35 +1,54 @@
 {
-  "name": "mi-service",
-  "version": "1.0.1",
-  "description": "XiaoMi Cloud Service for mi.com This is a fork from https://github.com/Yonsm/MiService implemented in TypeScript.",
-  "main": "dist/index.js",
-  "scripts": {
-    "start": "tsc --watch",
-    "build": "tsc"
-  },
-  "author": "inu1255",
+  "name": "mi-service-lite",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "XiaoMi Cloud Service for mi.com This is a fork from https://github.com/inu1255/mi-service",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/inu1255/mi-service.git"
+  "author": {
+    "name": "Del Wang",
+    "email": "hello@xbox.work",
+    "url": "https://github.com/idootop"
   },
   "keywords": [
+    "mi",
     "xiaomi",
-    "miio"
+    "mina",
+    "miiot",
+    "mi-service"
   ],
-  "bugs": {
-    "url": "https://github.com/inu1255/mi-service/issues"
+  "scripts": {
+    "prepublish": "npm run build",
+    "build": "tsc --module CommonJS && cd dist && mv \"index.js\" \"index.cjs\" && cd ../ && tsc --module esnext"
   },
-  "homepage": "https://github.com/inu1255/mi-service#readme",
   "dependencies": {
-    "axios": "^1.4.0",
-    "dotenv": "^16.3.1"
+    "axios": "^1.6.5",
+    "pako": "^2.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.4.9",
-    "typescript": "^4.5.5"
+    "@types/pako": "^2.0.3",
+    "dotenv": "^16.3.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org"
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    "import": "./dist/index.js",
+    "require": "./dist/index.cjs",
+    "default": "./dist/index.js"
+  },
+  "homepage": "https://github.com/idootop/mi-service-lite",
+  "bugs": {
+    "url": "https://github.com/idootop/mi-service-lite/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idootop/mi-service-lite.git"
   }
 }

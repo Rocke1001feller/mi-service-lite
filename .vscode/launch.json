@@ -1,16 +1,19 @@
 {
-	// 使用 IntelliSense 了解相关属性。 
-	// 悬停以查看现有属性的描述。
-	// 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
-	"version": "0.2.0",
-	"configurations": [{
-			"type": "node",
-			"request": "launch",
-			"name": "file",
-			"skipFiles": [
-				"<node_internals>/**"
-			],
-			"program": "${workspaceFolder}/dist/index.js"
-		}
-	]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Test.ts",
+      "type": "node",
+      "request": "launch",
+      "args": ["${workspaceFolder}/tests/index.ts"],
+      "runtimeArgs": [
+        "--no-warnings",
+        "--experimental-specifier-resolution=node",
+        "--loader",
+        "./tests/esm-loader.js"
+      ],
+      "cwd": "${workspaceRoot}",
+      "internalConsoleOptions": "openOnSessionStart"
+    }
+  ]
 }
