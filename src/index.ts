@@ -1,9 +1,15 @@
 import { getMiService } from "./mi/index";
 
-export async function getMiIOT(opt: { username: string; password: string }) {
-  return getMiService({ service: "miiot", ...opt });
+interface MiServiceConfig {
+  username: string;
+  password: string;
+  deviceId?: string;
 }
 
-export async function getMiNA(opt: { username: string; password: string }) {
-  return getMiService({ service: "mina", ...opt });
+export async function getMiIOT(config: MiServiceConfig) {
+  return getMiService({ service: "miiot", ...config });
+}
+
+export async function getMiNA(config: MiServiceConfig) {
+  return getMiService({ service: "mina", ...config });
 }

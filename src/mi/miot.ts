@@ -3,19 +3,13 @@ import { Http } from "../utils/http";
 import { jsonDecode } from "../utils/json";
 import { MiAccount } from "./account";
 
-// "LX06": ("5-1", "5-5"), 小爱音箱 Pro
-
 export class MiIOT {
   account: MiAccount;
   server: string;
 
-  constructor(
-    account: MiAccount,
-    region: "cn" | "de" | "i2" | "ru" | "sg" | "us" = "cn"
-  ) {
+  constructor(account: MiAccount) {
     this.account = account;
-    const prefix = region === "cn" ? "" : region + ".";
-    this.server = `https://${prefix}api.io.mi.com/app`;
+    this.server = `https://api.io.mi.com/app`;
   }
 
   private async _calMiIOT(uri: string, data: any) {

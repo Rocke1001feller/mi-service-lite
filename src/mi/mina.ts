@@ -57,70 +57,69 @@ export class MiNA {
     return res.data;
   }
 
-  private _callUbus(
-    deviceId: string,
-    method: string,
-    path: string,
-    message: any
-  ) {
+  private _callUbus(method: string, path: string, message: any) {
     message = jsonEncode(message);
-    return this._callMina("/remote/ubus", { deviceId, message, method, path });
+    return this._callMina("/remote/ubus", {
+      deviceId: this.account.deviceId,
+      message,
+      method,
+      path,
+    });
   }
 
   getDevices(master = 0) {
     return this._callMina("/admin/v2/device_list?master=" + master);
   }
 
-  getStatus(deviceId: string) {
-    return this._callUbus(deviceId, "player_get_play_status", "mediaplayer", {
+  getStatus() {
+    return this._callUbus("player_get_play_status", "mediaplayer", {
       media: "app_ios",
     });
   }
 
-  play(deviceId: string, url: string) {
-    return this._callUbus(deviceId, "player_play_url", "mediaplayer", {
+  play(url: string) {
+    return this._callUbus("player_play_url", "mediaplayer", {
       url: url,
       type: 1,
       media: "app_ios",
     });
   }
 
-  pause(deviceId: string) {
-    return this._callUbus(deviceId, "player_play_operation", "mediaplayer", {
+  pause() {
+    return this._callUbus("player_play_operation", "mediaplayer", {
       action: "pause",
       media: "app_ios",
     });
   }
 
-  resume(deviceId: string) {
-    return this._callUbus(deviceId, "player_play_operation", "mediaplayer", {
+  resume() {
+    return this._callUbus("player_play_operation", "mediaplayer", {
       action: "play",
       media: "app_ios",
     });
   }
 
-  tts(deviceId: string, text: string) {
-    return this._callUbus(deviceId, "text_to_speech", "mibrain", {
+  tts(text: string) {
+    return this._callUbus("text_to_speech", "mibrain", {
       text: text,
     });
   }
 
-  setVolume(deviceId: string, volume: number) {
-    return this._callUbus(deviceId, "player_set_volume", "mediaplayer", {
+  setVolume(volume: number) {
+    return this._callUbus("player_set_volume", "mediaplayer", {
       volume: volume,
       media: "app_ios",
     });
   }
 
   async getConversations(
-    deviceId: string,
     hardware: string,
     limit = 2
   ): Promise<Conversations | undefined> {
     const headers = {
       "User-Agent":
         "MiHome/6.0.103 (com.xiaomi.mihome; build:6.0.103.1; iOS 14.4.0) Alamofire/6.0.103 MICO/iOSApp/appStore/6.0.103",
-      Cookie: `deviceId=${deviceId}; serviceToken="${this.account.serviceToken}"; userId=${this.account.userId}`,
+      Cookie: `deviceId=${this.account.deviceId}; serviceToken="${this.account.serviceToken}"; userId=${this.account.userId}`,
     };
     let url = `https://userprofile.mina.mi.com/device_profile/v2/conversation?source=dialogu&hardware=${hardware}&timestamp=${Date.now()}&limit=${limit}`;
     const res = await Http.get(url, { headers });

@@ -3,11 +3,26 @@ import { RC4, rc4Hash } from "./rc4";
 import * as pako from "pako";
 import { jsonDecode, jsonEncode } from "./json";
 
-export function parseLoginResponse(res: string) {
+export function parseLoginResponse(res: string): Partial<{
+  code: number;
+  description: string;
+  qs: string;
+  _sign: string;
+  callback: string;
+  location: string;
+  ssecurity?: string;
+  passToken?: string;
+  nonce?: string;
+  userId?: string;
+  cUserId?: string;
+  psecurity?: string;
+}> {
   try {
     return (
       jsonDecode(
-        res.replace("&&&START&&&", "").replace(/:(\d{16,})/g, ':"$1"')
+        res
+          .replace("&&&START&&&", "") // 去除前缀
+          .replace(/:(\d{9,})/g, ':"$1"') // 把 userId 和 nonce 转成 string
       ) ?? {}
     );
   } catch {
@@ -57,24 +72,17 @@ export function decodeMiIOT(
   return Promise.resolve(decrypted.toString());
 }
 
-export function encodeQuery(data: { [key: string]: any }, limit = 0): string {
-  var ss: string[] = [];
-  for (var k in data) {
-    var v = data[k];
-    if (v == null || typeof v === "function") {
-      continue;
-    }
-    if (typeof v === "object") {
-      v = jsonEncode(v);
-    } else {
-      v = v.toString();
-    }
-    if (v.length > limit) {
-      continue;
-    }
-    ss.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
-  }
-  return ss.join("&");
+export function encodeQuery(
+  data: Record<string, string | number | boolean | undefined>
+): string {
+  return Object.entries(data)
+    .map(
+      ([key, value]) =>
+        encodeURIComponent(key) +
+        "=" +
+        encodeURIComponent(value == null ? "" : value.toString())
+    )
+    .join("&");
 }
 
 export function encodeMiIOT(

@@ -1,0 +1,305 @@
+# 抓包记录
+
+## 检查登录状态
+Host: account.xiaomi.com
+GET /pass/serviceLogin?_json=true&sid=micoapi&_locale=zh_CN
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Dalvik/2.1.0 (Linux; U; Android 10; 000) APP/xiaomi.mico APPV/000 000= PassportSDK/3.8.3 passport-ui/3.8.3
+Cookie: userId=000000000; deviceId=an_00000000000000000000000000000000; sdkVersion=accountsdk-2020.01.09
+Accept-Encoding: gzip
+
+&&&START&&&{"serviceParam":"{\"checkSafePhone\":false,\"checkSafeAddress\":false,\"lsrp_score\":0.0}","qs":"%3F_json%3Dtrue%26sid%3Dmicoapi%26_locale%3Dzh_CN","code":70016,"description":"登录验证失败","securityStatus":0,"_sign":"000","sid":"micoapi","result":"error","captchaUrl":null,"callback":"https://api2.mina.mi.com/sts","location":"https://account.xiaomi.com/fe/service/login?_json=true&_locale=zh_CN&sid=micoapi&qs=%253F_json%253Dtrue%2526sid%253Dmicoapi%2526_locale%253Dzh_CN&callback=https%3A%2F%2Fapi2.mina.mi.com%2Fsts&_sign=000%3D&serviceParam=%7B%22checkSafePhone%22%3Afalse%2C%22checkSafeAddress%22%3Afalse%2C%22lsrp_score%22%3A0.0%7D&showActiveX=false&theme=&needTheme=false&bizDeviceType=","pwd":0,"child":0,"desc":"登录验证失败"}
+
+{
+    "serviceParam":"{\"checkSafePhone\":false,\"checkSafeAddress\":false,\"lsrp_score\":0.0}",
+    "qs":"%3F_json%3Dtrue%26sid%3Dmicoapi%26_locale%3Dzh_CN",
+    "code":70016,
+    "description":"登录验证失败",
+    "securityStatus":0,
+    "_sign":"000",
+    "sid":"micoapi",
+    "result":"error",
+    "captchaUrl":null,
+    "callback":"https://api2.mina.mi.com/sts",
+    "location":"https://account.xiaomi.com/fe/service/login?_json=true&_locale=zh_CN&sid=micoapi&qs=%253F_json%253Dtrue%2526sid%253Dmicoapi%2526_locale%253Dzh_CN&callback=https%3A%2F%2Fapi2.mina.mi.com%2Fsts&_sign=000%3D&serviceParam=%7B%22checkSafePhone%22%3Afalse%2C%22checkSafeAddress%22%3Afalse%2C%22lsrp_score%22%3A0.0%7D&showActiveX=false&theme=&needTheme=false&bizDeviceType=",
+    "pwd":0,
+    "child":0,
+    "desc":"登录验证失败"
+}
+
+## 登陆（micoapi）
+
+Host: account.xiaomi.com
+POST /pass/serviceLoginAuth2 
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Dalvik/2.1.0 (Linux; U; Android 10; 000) APP/xiaomi.mico APPV/000 000= PassportSDK/3.8.3 passport-ui/3.8.3
+Cookie: deviceId=an_00000000000000000000000000000000; sdkVersion=accountsdk-2020.01.09
+Accept-Encoding: gzip
+
+cc=%2B86&qs=%253F_json%253Dtrue%2526sid%253Dmicoapi%2526_locale%253Dzh_CN&callback=https%3A%2F%2Fapi2.mina.mi.com%2Fsts&_json=true&_sign=000%3D&user=000000000&hash=000&sid=micoapi&_locale=zh_CN
+
+cc=%2B86
+qs=%253F_json%253Dtrue%2526sid%253Dmicoapi%2526_locale%253Dzh_CN
+callback=https%3A%2F%2Fapi2.mina.mi.com%2Fsts
+_json=true
+_sign=000%3D
+user=000000000
+hash=000
+sid=micoapi
+_locale=zh_CN
+
+&&&START&&&{"qs":"%3F_json%3Dtrue%26sid%3Dmicoapi%26_locale%3Dzh_CN","ssecurity":"000=","code":0,"passToken":"V1:000","description":"成功","securityStatus":0,"nonce":000,"userId":000000000,"cUserId":"000","result":"ok","psecurity":"000=","captchaUrl":null,"location":"https://api2.mina.mi.com/sts?d=an_00000000000000000000000000000000&ticket=0&pwd=1&p_ts=000&fid=0&p_lm=1&auth=000&m=1&_group=DEFAULT&tsl=0&p_ca=0&p_ur=CN&p_idc=China&nonce=r000&_ssign=000","pwd":1,"child":0,"desc":"成功"}
+{
+    "qs":"%3F_json%3Dtrue%26sid%3Dmicoapi%26_locale%3Dzh_CN",
+    "ssecurity":"000=",
+    "code":0,
+    "passToken":"V1:000",
+    "description":"成功",
+    "securityStatus":0,
+    "nonce":000,
+    "userId":000000000,
+    "cUserId":"000",
+    "result":"ok",
+    "psecurity":"000=",
+    "captchaUrl":null,
+    "location":"https://api2.mina.mi.com/sts?d=an_00000000000000000000000000000000&ticket=0&pwd=1&p_ts=000&fid=0&p_lm=1&auth=000&m=1&_group=DEFAULT&tsl=0&p_ca=0&p_ur=CN&p_idc=China&nonce=r000&_ssign=000",
+    "pwd":1,
+    "child":0,
+    "desc":"成功"
+}
+
+## 获取 serviceToken（micoapi）
+
+Host: api2.mina.mi.com
+GET /sts?d=an_00000000000000000000000000000000&ticket=0&pwd=1&p_ts=000&fid=0&p_lm=1&auth=000&m=1&_group=DEFAULT&tsl=0&p_ca=0&p_ur=CN&p_idc=China&nonce=r000&_ssign=000&_userIdNeedEncrypt=true&clientSign=000 
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Dalvik/2.1.0 (Linux; U; Android 10; 000) APP/xiaomi.mico APPV/000 000= PassportSDK/3.8.3 passport-ui/3.8.3
+Cookie: sdkVersion=accountsdk-2020.01.09; deviceId=an_00000000000000000000000000000000
+Accept-Encoding: gzip
+
+{
+  "R": "",
+  "S": "OK"
+}
+
+Set-cookie:
+serviceToken=000; domain=.mina.mi.com; path=/
+
+
+## 获取设备列表
+
+GET /admin/v2/device_list?requestId=000&timestamp=1000000000000 
+host: api2.mina.mi.com
+user-agent: MICO/AndroidApp/@SHIP.TO.2A2FE0D7@/2.4.40
+accept-encoding: gzip
+cookie: userId=000000000; deviceSNProfile=; deviceSNProfile=; serviceToken=000; hardware=S12; sn=;
+
+{
+  "code": 0,
+  "message": "Success",
+  "data": [
+    {
+      "deviceID": "000",
+      "serialNumber": "000",
+      "name": "小爱音箱000",
+      "alias": "小爱音箱000",
+      "current": false,
+      "presence": "online",
+      "address": "000",
+      "miotDID": "000",
+      "hardware": "LX06",
+      "romVersion": "000",
+      "capabilities": {
+        "multiroom_music": 1,
+        "multiroom_miplay": 1,
+        "content_blacklist": 1,
+        "night_mode_v2": 1,
+        "school_timetable": 1,
+        "user_nick_name": 1,
+        "night_mode": 1,
+        "player_pause_timer": 1,
+        "dialog_h5": 1,
+        "child_mode_2": 1,
+        "stereo_mode_v2": 1,
+        "dlna": 1,
+        "report_times": 1,
+        "voip_signal": 1,
+        "ai_instruction": 1,
+        "alarm_volume": 1,
+        "classified_alarm": 1,
+        "loadmore_v2": 1,
+        "mesh": 1,
+        "ai_protocol_3_0": 1,
+        "voice_print_multidevice": 1,
+        "night_mode_detail": 1,
+        "child_mode": 1,
+        "baby_schedule": 1,
+        "didi_auth": 1,
+        "tone_setting": 1,
+        "earthquake": 1,
+        "alarm_repeat_option_v2": 1,
+        "nearby_wakeup_cloud": 1,
+        "family_voice": 1,
+        "bluetooth_option_v2": 1,
+        "custom_ir": 1,
+        "yueyu": 1,
+        "yunduantts": 1,
+        "stereo_mode": 1,
+        "mico_current": 1,
+        "dts_sound_effect": 1,
+        "voip_used_time": 1
+      },
+      "remoteCtrlType": "",
+      "deviceSNProfile": "000",
+      "deviceProfile": "000",
+      "brokerEndpoint": "000",
+      "brokerIndex": 000,
+      "mac": "000",
+      "ssid": ""
+    }
+  ]
+}
+
+## 获取音响状态
+
+POST /remote/ubus 
+host: api2.mina.mi.com
+user-agent: MICO/AndroidApp/@SHIP.TO.2A2FE0D7@/2.4.40
+content-type: application/x-www-form-urlencoded
+accept-encoding: gzip
+cookie: deviceSNProfile=000; serviceToken=000; deviceId=000; userId=000000000; userId=000000000; deviceId=000; deviceSNProfile=000; hardware=LX06; sn=000; serviceToken=000; sn=000; hardware=LX06
+
+deviceId=000&path=mediaplayer&method=player_get_play_status&message=%7B%7D&requestId=000&timestamp=000
+
+{
+  "code": 0,
+  "message": "Msg has been successfully proxy to the device, this service is a simple proxy, if you encounter any problems pls contact ROM's developers directly!!!",
+  "data": {
+    "code": 0,
+    "info": "{ \"status\": 0, \"volume\": 50, \"loop_type\": 1 }"
+  }
+}
+
+## 登录（xiaomiio）
+
+Host: account.xiaomi.com
+GET /pass/serviceLogin?_json=true&appName=com.xiaomi.mico&sid=xiaomiio&_locale=zh_CN 
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Dalvik/2.1.0 (Linux; U; Android 10; 000) APP/xiaomi.mico APPV/000 000= PassportSDK/3.8.3 passport-ui/3.8.3
+Cookie: passToken=V1:000; sdkVersion=accountsdk-2020.01.09; userId=000000000; deviceId=an_00000000000000000000000000000000
+Accept-Encoding: gzip
+
+&&&START&&&{"notificationUrl":"","ssecurity":"000==","code":0,"passToken":"V1:000","description":"成功","securityStatus":0,"nonce":000,"userId":000000000,"cUserId":"000","result":"ok","psecurity":"000=","captchaUrl":null,"location":"https://sts.api.io.mi.com/sts?d=an_00000000000000000000000000000000&ticket=0&pwd=0&p_ts=000&fid=0&p_lm=1&auth=000&m=1&_group=DEFAULT&tsl=0&p_ca=0&p_ur=CN&p_idc=China&nonce=000&_ssign=000","pwd":1,"child":0,"desc":"成功"}
+
+## 获取 serviceToken（micoapi）
+
+Host: sts.api.io.mi.com
+GET /sts?d=an_00000000000000000000000000000000&ticket=0&pwd=0&p_ts=000&fid=0&p_lm=1&auth=000&m=1&_group=DEFAULT&tsl=0&p_ca=0&p_ur=CN&p_idc=China&nonce=000&_ssign=000&_userIdNeedEncrypt=true&clientSign=000 HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Dalvik/2.1.0 (Linux; U; Android 10; 000) APP/xiaomi.mico APPV/000 000= PassportSDK/3.8.3 passport-ui/3.8.3
+Cookie: sdkVersion=accountsdk-2020.01.09; deviceId=an_00000000000000000000000000000000
+Accept-Encoding: gzip
+
+ok
+
+set-cookie：
+serviceToken=000; Path=/; Domain=sts.api.io.mi.com
+
+
+## 获取对话记录
+
+host: userprofile.mina.mi.com
+GET /device_profile/v2/conversation?source=dialogu&hardware=LX06&limit=10&requestId=000 
+accept: application/json, text/plain, */*
+user-agent: Mozilla/5.0 (Linux; Android 10; 000; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/119.0.6045.193 Mobile Safari/537.36 /XiaoMi/HybridView/ micoSoundboxApp/i appVersion/A_2.4.40
+
+referer: https://userprofile.mina.mi.com/dialogue-note/index.html
+cookie: deviceId=000
+cookie: userId=000000000
+cookie: serviceToken=000
+
+
+{
+  "code": 0,
+  "message": "Success",
+  "data": "{\"bitSet\":[0,1,1],\"records\":[{\"bitSet\":[0,1,1,1,1],\"answers\":[],\"time\":000,\"query\":\"暂停\",\"requestId\":\"000\"},{\"bitSet\":[0,1,1,1,1],\"answers\":[],\"time\":000,\"query\":\"000\",\"requestId\":\"000\"}],\"nextEndTime\":000}"
+}
+
+{
+  "bitSet": [
+    0,
+    1,
+    1
+  ],
+  "records": [
+    {
+      "bitSet": [
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "answers": [],
+      "time": 000,
+      "query": "000",
+      "requestId": "000"
+    },
+    {
+      "bitSet": [
+        0,
+        1,
+        1,
+        1,
+        1
+      ],
+      "answers": [],
+      "time": 000,
+      "query": "音量调高30%",
+      "requestId": "000"
+    }
+  ],
+  "nextEndTime": 000
+} 
+
+## 获取音效模式
+
+POST /remote/ubus HTTP/2
+host: api2.mina.mi.com
+user-agent: MICO/AndroidApp/@SHIP.TO.2A2FE0D7@/2.4.40
+content-type: application/x-www-form-urlencoded
+content-length: 149
+accept-encoding: gzip
+cookie: deviceSNProfile=000; serviceToken=000; deviceId=000; userId=000000000; userId=000000000; deviceId=000; deviceSNProfile=000; hardware=LX06; sn=000; serviceToken=000; sn=000; hardware=LX06
+
+deviceId=000&path=sound_effect&method=get_mode&message=%7B%7D&requestId=000&timestamp=000
+
+{
+  "code": 0,
+  "message": "Msg has been successfully proxy to the device, this service is a simple proxy, if you encounter any problems pls contact ROM's developers directly!!!",
+  "data": {
+    "mode": 0,
+    "effect": 1
+  }
+}
+
+## 设置音效模式
+
+POST /remote/ubus HTTP/2
+host: api2.mina.mi.com
+user-agent: MICO/AndroidApp/@SHIP.TO.2A2FE0D7@/2.4.40
+content-type: application/x-www-form-urlencoded
+content-length: 182
+accept-encoding: gzip
+cookie: deviceSNProfile=000; serviceToken=000; deviceId=000; userId=000000000; userId=000000000; deviceId=000; deviceSNProfile=000; hardware=LX06; sn=000; serviceToken=000; sn=000; hardware=LX06
+
+deviceId=000&path=sound_effect&method=set_mode&message=%7B%22mode%22%3A2%2C%22effect%22%3A1%7D&requestId=000&timestamp=000
+
+{
+  "code": 0,
+  "message": "Msg has been successfully proxy to the device, this service is a simple proxy, if you encounter any problems pls contact ROM's developers directly!!!",
+  "data": {
+    "mode": 2,
+    "effect": 1
+  }
+}

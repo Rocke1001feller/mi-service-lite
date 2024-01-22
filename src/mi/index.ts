@@ -6,19 +6,19 @@ import { MiNA } from "./mina";
 
 interface Store {
   deviceId: string;
-  userId: number;
+  userId: string;
   passToken: string;
   miiot?: string[];
   mina?: string[];
 }
 
-export async function getMiService(opt: {
+export async function getMiService(config: {
   service: "miiot" | "mina";
   username: string;
   password: string;
   deviceId?: string;
 }) {
-  const { service, username, password, deviceId = "wb_" + uuid() } = opt;
+  const { service, username, password, deviceId = uuid() } = config;
   let account: MiAccount | undefined;
   const store: Store = (await readJSON(".mi")) ?? {
     deviceId,

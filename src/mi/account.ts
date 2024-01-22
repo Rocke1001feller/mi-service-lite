@@ -1,66 +1,55 @@
-import { sha1 } from "../utils/hash";
+import { md5, sha1 } from "../utils/hash";
 import { Http } from "../utils/http";
 import { encodeQuery, parseLoginResponse } from "../utils/codec";
-import { jsonDecode } from "../utils/json";
 
 export interface GetAccountOption {
   username: string;
   password: string;
   sid: "xiaomiio" | "micoapi";
   deviceId: string;
+  passToken?: string;
 }
 
 export interface MiAccount {
-  userId: number;
+  userId: string;
   passToken: string;
   ssecurity: string;
   serviceToken: string;
   deviceId: string;
 }
 
+const kLoginAPI = "https://account.xiaomi.com/pass";
+
 export async function getAccount(
   opt: GetAccountOption
 ): Promise<MiAccount | undefined> {
   let res = await Http.get(
-    `https://account.xiaomi.com/pass/serviceLogin?sid=${opt.sid}&_json=true`,
-    {
-      headers: {
-        "User-Agent":
-          "APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS",
-        Cookie: `deviceId=${opt.deviceId}; sdkVersion=3.9`,
-      },
-    }
+    `${kLoginAPI}/serviceLogin`,
+    { sid: opt.sid, _json: true, _locale: "zh_CN" },
+    { cookies: _getLoginCookies(opt) }
   );
   if (res.isError) {
-    console.error("login failed", res);
+    console.error("serviceLogin failed", res);
     return undefined;
   }
   let resp = parseLoginResponse(res);
   if (resp.code !== 0) {
+    // 登陆态失效，重新登录
     let data = {
       _json: "true",
       qs: resp.qs,
-      sid: resp.sid,
+      sid: opt.sid,
       _sign: resp._sign,
       callback: resp.callback,
       cc: "+86",
       user: opt.username,
-      hash: opt.password,
+      hash: md5(opt.password).toUpperCase(),
     };
-    res = await Http.post(
-      "https://account.xiaomi.com/pass/serviceLoginAuth2",
-      encodeQuery(data),
-      {
-        headers: {
-          "User-Agent":
-            "APP/com.xiaomi.mihome APPV/6.0.103 iosPassportSDK/3.9.0 iOS/14.4 miHSTS",
-          Cookie: `deviceId=${opt.deviceId}; pass_ua=web; sdkVersion=3.9; uLocale=zh_CN`,
-          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-        },
-      }
-    );
+    res = await Http.post(`${kLoginAPI}/serviceLoginAuth2`, encodeQuery(data), {
+      cookies: _getLoginCookies(opt),
+    });
     if (res.isError) {
-      console.error("login failed", res);
+      console.error("serviceLoginAuth2 failed", res);
       return undefined;
     }
     resp = parseLoginResponse(res);
@@ -69,40 +58,53 @@ export async function getAccount(
     console.error("login failed", res);
     return undefined;
   }
-  const serviceToken = await _securityTokenService(
+  const serviceToken = await _getServiceToken(
     resp.location,
-    resp.nonce,
-    resp.ssecurity
+    resp.nonce!,
+    resp.ssecurity!
   );
   if (!serviceToken) {
     return undefined;
   }
   return {
-    userId: resp.userId,
-    passToken: resp.passToken,
-    ssecurity: resp.ssecurity,
+    userId: resp.userId!,
+    passToken: resp.passToken!,
+    ssecurity: resp.ssecurity!,
     serviceToken: serviceToken,
     deviceId: opt.deviceId,
   };
 }
 
-async function _securityTokenService(
+function _getLoginCookies(opt: GetAccountOption) {
+  return {
+    userId: opt.username,
+    passToken: opt.passToken,
+    // 此处我们直接取音响的 deviceId 作为登陆设备的 deviceId
+    deviceId: "an_" + opt.deviceId.replaceAll("-", ""),
+    sdkVersion: "accountsdk-2020.01.09",
+  };
+}
+
+async function _getServiceToken(
   location: string,
   nonce: string,
   ssecurity: string
-) {
-  const nsec = `nonce=${nonce}&${ssecurity}`;
-  const clientSign = sha1(nsec);
+): Promise<string | undefined> {
   const res = await Http.get(
-    `${location}&clientSign=${encodeURIComponent(clientSign)}`,
+    location,
+    {
+      _userIdNeedEncrypt: true,
+      clientSign: sha1(`nonce=${nonce}&${ssecurity}`),
+    },
     { rawResponse: true }
   );
+
   let cookies = res.headers["set-cookie"] ?? [];
   for (let cookie of cookies) {
     if (cookie.includes("serviceToken")) {
-      return cookie.split(";")[0].split("=").slice(1).join("=");
+      return cookie.split(";")[0].replace("serviceToken=", "");
     }
   }
-  console.error("_securityTokenService failed", res);
+  console.error("_getServiceToken failed", res);
   return undefined;
 }
