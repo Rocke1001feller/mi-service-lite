@@ -1,8 +1,8 @@
 import { md5, sha1 } from "../utils/hash";
 import { Http } from "../utils/http";
-import { encodeQuery, parseLoginResponse } from "../utils/codec";
+import { encodeQuery, parseAuthPass } from "../utils/codec";
 import { MiNA } from "./mina";
-import { MiAccount } from "./types";
+import { MiAccount, MiPass } from "./types";
 
 const kLoginAPI = "https://account.xiaomi.com/pass";
 
@@ -18,15 +18,15 @@ export async function getAccount(
     console.error("serviceLogin failed", res);
     return undefined;
   }
-  let resp = parseLoginResponse(res);
-  if (resp.code !== 0) {
+  let pass = parseAuthPass(res);
+  if (pass.code !== 0) {
     // 登陆态失效，重新登录
     let data = {
       _json: "true",
-      qs: resp.qs,
+      qs: pass.qs,
       sid: account.sid,
-      _sign: resp._sign,
-      callback: resp.callback,
+      _sign: pass._sign,
+      callback: pass.callback,
       cc: "+86",
       user: account.userId,
       hash: md5(account.password).toUpperCase(),
@@ -38,26 +38,17 @@ export async function getAccount(
       console.error("serviceLoginAuth2 failed", res);
       return undefined;
     }
-    resp = parseLoginResponse(res);
+    pass = parseAuthPass(res);
   }
-  if (!resp.location || !resp.nonce) {
+  if (!pass.location || !pass.nonce || !pass.passToken) {
     console.error("login failed", res);
     return undefined;
   }
-  const serviceToken = await _getServiceToken(
-    resp.location,
-    resp.nonce,
-    resp.ssecurity!
-  );
+  const serviceToken = await _getServiceToken(pass);
   if (!serviceToken) {
     return undefined;
   }
-  account = {
-    ...account,
-    passToken: resp.passToken,
-    ssecurity: resp.ssecurity,
-    serviceToken: serviceToken,
-  };
+  account = { ...account, pass, serviceToken };
   if (!account.device?.deviceSNProfile) {
     account.device = await MiNA.getDevice(account);
   }
@@ -67,18 +58,15 @@ export async function getAccount(
 function _getLoginCookies(account: MiAccount) {
   return {
     userId: account.userId,
-    passToken: account.passToken,
     deviceId: account.deviceId,
+    passToken: account.pass?.passToken,
   };
 }
 
-async function _getServiceToken(
-  location: string,
-  nonce: string,
-  ssecurity: string
-): Promise<string | undefined> {
+async function _getServiceToken(pass: MiPass): Promise<string | undefined> {
+  const { location, nonce, ssecurity } = pass ?? {};
   const res = await Http.get(
-    location,
+    location!,
     {
       _userIdNeedEncrypt: true,
       clientSign: sha1(`nonce=${nonce}&${ssecurity}`),

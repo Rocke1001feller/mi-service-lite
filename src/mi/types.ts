@@ -1,3 +1,16 @@
+export type MiPass = Partial<{
+  qs: string;
+  _sign: string;
+  callback: string;
+  location: string;
+  ssecurity: string;
+  passToken: string;
+  nonce: string;
+  userId: string;
+  cUserId: string;
+  psecurity: string;
+}>;
+
 export interface MiDevice {
   deviceId: string;
   deviceID: string;
@@ -21,8 +34,7 @@ export interface MiAccount {
   userId: string;
   password: string;
   // 登录凭证
-  passToken?: string;
-  ssecurity?: string;
+  pass?: MiPass;
   serviceToken?: string;
   // 音响设备信息
   did?: string; // 音响设备 id 或 name

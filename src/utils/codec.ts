@@ -2,21 +2,12 @@ import { randomNoice, signNonce } from "./hash";
 import { RC4, rc4Hash } from "./rc4";
 import * as pako from "pako";
 import { jsonDecode, jsonEncode } from "./json";
+import { MiPass } from "../mi/types";
 
-export function parseLoginResponse(res: string): Partial<{
-  code: number;
-  description: string;
-  qs: string;
-  _sign: string;
-  callback: string;
-  location: string;
-  ssecurity?: string;
-  passToken?: string;
-  nonce?: string;
-  userId?: string;
-  cUserId?: string;
-  psecurity?: string;
-}> {
+export function parseAuthPass(res: string): {
+  code?: number;
+  description?: string;
+} & MiPass {
   try {
     return (
       jsonDecode(

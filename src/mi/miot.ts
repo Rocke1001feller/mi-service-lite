@@ -31,7 +31,12 @@ export class MiIOT {
       },
     };
     let res;
-    const data = encodeMiIOT(method, path, _data, this.account.ssecurity!);
+    const data = encodeMiIOT(
+      method,
+      path,
+      _data,
+      this.account.pass!.ssecurity!
+    );
     if (method === "GET") {
       res = await Http.get(url, data, config);
     } else {
@@ -42,7 +47,7 @@ export class MiIOT {
       return undefined;
     }
     res = await decodeMiIOT(
-      this.account.ssecurity!,
+      this.account.pass!.ssecurity!,
       data._nonce,
       res.data,
       res.headers["miot-content-encoding"] === "GZIP"

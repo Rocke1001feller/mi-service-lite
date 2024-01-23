@@ -29,7 +29,7 @@ export async function getMiService(config: {
     password,
     sid: service === "miiot" ? "xiaomiio" : "micoapi",
   });
-  if (!account?.serviceToken) {
+  if (!account?.serviceToken || !account.pass?.ssecurity) {
     return undefined;
   }
   store[service] = account;
