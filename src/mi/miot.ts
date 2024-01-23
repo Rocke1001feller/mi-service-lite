@@ -5,67 +5,73 @@ import { MiAccount } from "./account";
 
 export class MiIOT {
   account: MiAccount;
-  server: string;
 
   constructor(account: MiAccount) {
     this.account = account;
-    this.server = `https://api.io.mi.com/app`;
   }
 
-  private async _calMiIOT(uri: string, data: any) {
-    if (data) {
-      data = encodeMiIOT("POST", uri, data, this.account.ssecurity);
-    }
-    const headers = {
-      "User-Agent":
-        "iOS-14.4-6.0.103-iPhone12,3--D7744744F7AF32F0544445285880DD63E47D9BE9-8816080-84A3F44E137B71AE-iPhone",
-      "x-xiaomi-protocal-flag-cli": "PROTOCAL-HTTP2",
-      "miot-accept-encoding": "GZIP",
-      "miot-encrypt-algorithm": "ENCRYPT-RC4",
-      Cookie: `PassportDeviceId=${this.account.deviceId}; serviceToken="${this.account.serviceToken}"; userId=${this.account.userId}`,
-    } as any;
+  private async _calMiIO(method: "GET" | "POST", path: string, _data?: any) {
+    const url = "https://api.io.mi.com/app" + path;
+    const config = {
+      rawResponse: true,
+      validateStatus: () => true,
+      headers: {
+        "User-Agent": "MICO/AndroidApp/@SHIP.TO.2A2FE0D7@/2.4.40",
+        "x-xiaomi-protocal-flag-cli": "PROTOCAL-HTTP2",
+        "miot-accept-encoding": "GZIP",
+        "miot-encrypt-algorithm": "ENCRYPT-RC4",
+      },
+      cookies: {
+        userId: this.account.username,
+        deviceId: this.account.deviceId,
+        serviceToken: this.account.serviceToken,
+        hardware: this.account.device?.hardware,
+        sn: this.account.device?.serialNumber,
+        deviceSNProfile: this.account.device?.deviceSNProfile,
+      },
+    };
     let res;
-    if (data) {
-      headers["Content-Type"] = "application/x-www-form-urlencoded";
-      res = await Http.post(this.server + uri, encodeQuery(data), {
-        headers: headers,
-        rawResponse: true,
-        validateStatus: () => true,
-      });
+    const data = encodeMiIOT(method, path, _data, this.account.ssecurity!);
+    if (method === "GET") {
+      res = await Http.get(url, data, config);
     } else {
-      res = await Http.get(this.server + uri, {
-        headers: headers,
-        rawResponse: true,
-        validateStatus: () => true,
-      });
+      res = await Http.post(url, encodeQuery(data as any), config);
     }
-    if (typeof res.data != "string") {
-      console.error("_calMiIOT failed", res);
+    if (typeof res.data !== "string") {
+      console.error("_calMiIO failed", res);
       return undefined;
     }
     res = await decodeMiIOT(
-      this.account.ssecurity,
+      this.account.ssecurity!,
       data._nonce,
       res.data,
-      res.headers["miot-content-encoding"] == "GZIP"
+      res.headers["miot-content-encoding"] === "GZIP"
     );
     return jsonDecode(res)?.result;
   }
 
   private _callHome(did: string, method: string, params: any) {
-    return this._calMiIOT("/home/rpc/" + did, {
+    return this._calMiIO("POST", "/home/rpc/" + did, {
       id: 1,
       method: method,
-      accessKey: "IOS00026747c5acafc2",
+      accessKey: "IOS00026747c5acafc2", // todo android key
       params: params,
     });
   }
 
   private _callMiIOT(cmd: string, params: any) {
-    return this._calMiIOT("/miotspec/" + cmd, {
+    return this._calMiIO("POST", "/miotspec/" + cmd, {
       params: params,
       datasource: 3,
     });
+  }
+
+  async getDevices(getVirtualModel = false, getHuamiDevices = 0) {
+    const res = await this._calMiIO("POST", "/home/getDevices", {
+      getVirtualModel: getVirtualModel,
+      getHuamiDevices: getHuamiDevices,
+    });
+    return res?.list;
   }
 
   getHomeProps(did: string, props: any) {
@@ -128,13 +134,5 @@ export class MiIOT {
       aiid: iid[1],
       in: args,
     });
-  }
-
-  async getDevices(getVirtualModel = false, getHuamiDevices = 0) {
-    const res = await this._calMiIOT("/home/getDevices", {
-      getVirtualModel: getVirtualModel,
-      getHuamiDevices: getHuamiDevices,
-    });
-    return res?.list;
   }
 }

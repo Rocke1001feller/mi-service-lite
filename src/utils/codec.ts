@@ -3,6 +3,13 @@ import { RC4, rc4Hash } from "./rc4";
 import * as pako from "pako";
 import { jsonDecode, jsonEncode } from "./json";
 
+/**
+ * 将音响设备的 ID 转换成登陆设备的 ID
+ */
+export function getLoginDeviceId(deviceId: string) {
+  return "an_" + deviceId.replaceAll("-", "");
+}
+
 export function parseLoginResponse(res: string): Partial<{
   code: number;
   description: string;
@@ -85,12 +92,20 @@ export function encodeQuery(
     .join("&");
 }
 
+interface MiIOTRequest {
+  data: string;
+  rc4_hash__: string;
+  signature: string;
+  _nonce: string;
+  ssecurity: string;
+}
+
 export function encodeMiIOT(
   method: string,
   uri: string,
   data: any,
   ssecurity: string
-) {
+): MiIOTRequest {
   let nonce = randomNoice();
   const snonce = signNonce(ssecurity, nonce);
   let key = Buffer.from(snonce, "base64");

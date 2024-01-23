@@ -1,23 +1,23 @@
 import { encodeQuery } from "../utils/codec";
-import { randomString } from "../utils/hash";
+import { uuid } from "../utils/hash";
 import { Http } from "../utils/http";
 import { jsonDecode, jsonEncode } from "../utils/json";
 import { MiAccount } from "./account";
 
 interface Conversations {
-  bitSet: number[];
+  bitSet: [number, number, number];
   records: {
-    bitSet: number[];
+    bitSet: [number, number, number, number, number];
     answers: {
-      bitSet: number[];
+      bitSet: [number, number, number, number, number];
       type: string;
       tts: {
         bitSet: number[];
         text: string;
       };
     }[];
-    time: number;
-    query: string;
+    time: number; // 秒
+    query: string; // 请求指令
     requestId: string;
   }[];
   nextEndTime: number;
@@ -30,25 +30,52 @@ export class MiNA {
     this.account = account;
   }
 
-  private async _callMina(uri: string, data?: any): Promise<any> {
-    const requestId = "app_ios_" + randomString(30);
-    if (data) {
-      data["requestId"] = requestId;
-    } else {
-      uri += "&requestId=" + requestId;
+  static async getDevice(account: MiAccount) {
+    const devices = await this.__callMina(
+      account,
+      "GET",
+      "/admin/v2/device_list"
+    );
+    const d = (devices ?? []).find((e: any) => (e.deviceID = account.deviceId));
+    if (!d) {
+      return undefined;
     }
+    return {
+      deviceId: d.deviceID,
+      hardware: d.hardware,
+      serialNumber: d.serialNumber,
+      deviceSNProfile: d.deviceSNProfile,
+    };
+  }
+
+  private static async __callMina(
+    account: MiAccount,
+    method: "GET" | "POST",
+    path: string,
+    data?: any
+  ): Promise<any> {
+    data = {
+      ...data,
+      requestId: uuid(),
+      timestamp: Math.floor(Date.now() / 1000),
+    };
+    const url = "https://api2.mina.mi.com" + path;
+    const config = {
+      headers: { "User-Agent": "MICO/AndroidApp/@SHIP.TO.2A2FE0D7@/2.4.40" },
+      cookies: {
+        userId: account.username,
+        deviceId: account.deviceId,
+        serviceToken: account.serviceToken,
+        hardware: account.device?.hardware,
+        sn: account.device?.serialNumber,
+        deviceSNProfile: account.device?.deviceSNProfile,
+      },
+    };
     let res;
-    let url = /^https?:/.test(uri) ? uri : "https://api2.mina.mi.com" + uri;
-    const headers = {
-      "User-Agent":
-        "MiHome/6.0.103 (com.xiaomi.mihome; build:6.0.103.1; iOS 14.4.0) Alamofire/6.0.103 MICO/iOSApp/appStore/6.0.103",
-      Cookie: `PassportDeviceId=${this.account.deviceId}; serviceToken="${this.account.serviceToken}"; userId=${this.account.userId}`,
-    } as any;
-    if (data) {
-      headers["Content-Type"] = "application/x-www-form-urlencoded";
-      res = await Http.post(url, encodeQuery(data), { headers: headers });
+    if (method === "GET") {
+      res = await Http.get(url, data, config);
     } else {
-      res = await Http.get(url, { headers: headers });
+      res = await Http.post(url, encodeQuery(data), config);
     }
     if (res.code !== 0) {
       console.error("_callMina failed", res);
@@ -57,45 +84,48 @@ export class MiNA {
     return res.data;
   }
 
+  private async _callMina(
+    method: "GET" | "POST",
+    path: string,
+    data?: any
+  ): Promise<any> {
+    return MiNA.__callMina(this.account, method, path, data);
+  }
+
   private _callUbus(method: string, path: string, message: any) {
     message = jsonEncode(message);
-    return this._callMina("/remote/ubus", {
+    return this._callMina("POST", "/remote/ubus", {
       deviceId: this.account.deviceId,
-      message,
-      method,
       path,
+      method,
+      message,
     });
   }
 
-  getDevices(master = 0) {
-    return this._callMina("/admin/v2/device_list?master=" + master);
+  getDevices() {
+    return this._callMina("GET", "/admin/v2/device_list");
   }
 
   getStatus() {
-    return this._callUbus("player_get_play_status", "mediaplayer", {
-      media: "app_ios",
-    });
+    return this._callUbus("player_get_play_status", "mediaplayer", {});
   }
 
   play(url: string) {
     return this._callUbus("player_play_url", "mediaplayer", {
       url: url,
       type: 1,
-      media: "app_ios",
     });
   }
 
   pause() {
     return this._callUbus("player_play_operation", "mediaplayer", {
       action: "pause",
-      media: "app_ios",
     });
   }
 
   resume() {
     return this._callUbus("player_play_operation", "mediaplayer", {
       action: "play",
-      media: "app_ios",
     });
   }
 
@@ -108,25 +138,35 @@ export class MiNA {
   setVolume(volume: number) {
     return this._callUbus("player_set_volume", "mediaplayer", {
       volume: volume,
-      media: "app_ios",
     });
   }
 
-  async getConversations(
-    hardware: string,
-    limit = 2
-  ): Promise<Conversations | undefined> {
-    const headers = {
-      "User-Agent":
-        "MiHome/6.0.103 (com.xiaomi.mihome; build:6.0.103.1; iOS 14.4.0) Alamofire/6.0.103 MICO/iOSApp/appStore/6.0.103",
-      Cookie: `deviceId=${this.account.deviceId}; serviceToken="${this.account.serviceToken}"; userId=${this.account.userId}`,
-    };
-    let url = `https://userprofile.mina.mi.com/device_profile/v2/conversation?source=dialogu&hardware=${hardware}&timestamp=${Date.now()}&limit=${limit}`;
-    const res = await Http.get(url, { headers });
+  async getConversations(limit = 10): Promise<Conversations | undefined> {
+    const res = await Http.get(
+      "https://userprofile.mina.mi.com/device_profile/v2/conversation",
+      {
+        limit,
+        requestId: uuid(),
+        source: "dialogu",
+        hardware: this.account.device?.hardware,
+      },
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Linux; Android 10; 000; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/119.0.6045.193 Mobile Safari/537.36 /XiaoMi/HybridView/ micoSoundboxApp/i appVersion/A_2.4.40",
+          Referer: "https://userprofile.mina.mi.com/dialogue-note/index.html",
+        },
+        cookies: {
+          userId: this.account.username,
+          deviceId: this.account.deviceId,
+          serviceToken: this.account.serviceToken,
+        },
+      }
+    );
     if (res.code !== 0) {
       console.error("getConversations failed", res);
       return undefined;
     }
-    return jsonDecode(res?.data?.data);
+    return jsonDecode(res.data);
   }
 }

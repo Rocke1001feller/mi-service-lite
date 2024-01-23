@@ -1,16 +1,14 @@
 import { readJSON, writeJSON } from "../utils/io";
-import { randomString, uuid } from "../utils/hash";
+import { uuid } from "../utils/hash";
 import { MiAccount, getAccount } from "./account";
 import { MiIOT } from "./miot";
 import { MiNA } from "./mina";
 
 interface Store {
-  deviceId: string;
-  userId: string;
-  passToken: string;
-  miiot?: string[];
-  mina?: string[];
+  miiot?: MiAccount;
+  mina?: MiAccount;
 }
+const kConfigFile = ".mi.json";
 
 export async function getMiService(config: {
   service: "miiot" | "mina";
@@ -20,33 +18,18 @@ export async function getMiService(config: {
 }) {
   const { service, username, password, deviceId = uuid() } = config;
   let account: MiAccount | undefined;
-  const store: Store = (await readJSON(".mi")) ?? {
+  const store: Store = (await readJSON(kConfigFile)) ?? {};
+  account = await getAccount({
+    ...store[service],
+    username,
+    password,
     deviceId,
-    userId: 0,
-    passToken: "",
-  };
-  if (!store[service]) {
-    account = await getAccount({
-      deviceId: store.deviceId,
-      username,
-      password,
-      sid: service === "miiot" ? "xiaomiio" : "micoapi",
-    });
-    if (!account) {
-      return undefined;
-    }
-    store.userId = account.userId;
-    store.passToken = account.passToken;
-    store[service] = [account.ssecurity, account.serviceToken];
-    await writeJSON(".mi", store);
-  } else {
-    account = {
-      deviceId: store.deviceId,
-      userId: store.userId,
-      passToken: store.passToken,
-      ssecurity: store[service]![0],
-      serviceToken: store[service]![1],
-    };
+    sid: service === "miiot" ? "xiaomiio" : "micoapi",
+  });
+  if (!account?.serviceToken) {
+    return undefined;
   }
+  store[service] = account;
+  await writeJSON(kConfigFile, store);
   return service === "miiot" ? new MiIOT(account) : new MiNA(account);
 }

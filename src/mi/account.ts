@@ -1,32 +1,41 @@
 import { md5, sha1 } from "../utils/hash";
 import { Http } from "../utils/http";
-import { encodeQuery, parseLoginResponse } from "../utils/codec";
+import {
+  encodeQuery,
+  getLoginDeviceId,
+  parseLoginResponse,
+} from "../utils/codec";
+import { MiNA } from "./mina";
 
-export interface GetAccountOption {
-  username: string;
-  password: string;
-  sid: "xiaomiio" | "micoapi";
+export interface Device {
+  hardware: string;
   deviceId: string;
-  passToken?: string;
+  serialNumber: string;
+  deviceSNProfile: string;
 }
 
 export interface MiAccount {
-  userId: string;
-  passToken: string;
-  ssecurity: string;
-  serviceToken: string;
+  sid: "xiaomiio" | "micoapi";
+  username: string;
+  password: string;
+  // 登录凭证
+  passToken?: string;
+  ssecurity?: string;
+  serviceToken?: string;
+  // 音响设备信息
   deviceId: string;
+  device?: Device;
 }
 
 const kLoginAPI = "https://account.xiaomi.com/pass";
 
 export async function getAccount(
-  opt: GetAccountOption
+  account: MiAccount
 ): Promise<MiAccount | undefined> {
   let res = await Http.get(
     `${kLoginAPI}/serviceLogin`,
-    { sid: opt.sid, _json: true, _locale: "zh_CN" },
-    { cookies: _getLoginCookies(opt) }
+    { sid: account.sid, _json: true, _locale: "zh_CN" },
+    { cookies: _getLoginCookies(account) }
   );
   if (res.isError) {
     console.error("serviceLogin failed", res);
@@ -38,15 +47,15 @@ export async function getAccount(
     let data = {
       _json: "true",
       qs: resp.qs,
-      sid: opt.sid,
+      sid: account.sid,
       _sign: resp._sign,
       callback: resp.callback,
       cc: "+86",
-      user: opt.username,
-      hash: md5(opt.password).toUpperCase(),
+      user: account.username,
+      hash: md5(account.password).toUpperCase(),
     };
     res = await Http.post(`${kLoginAPI}/serviceLoginAuth2`, encodeQuery(data), {
-      cookies: _getLoginCookies(opt),
+      cookies: _getLoginCookies(account),
     });
     if (res.isError) {
       console.error("serviceLoginAuth2 failed", res);
@@ -54,33 +63,36 @@ export async function getAccount(
     }
     resp = parseLoginResponse(res);
   }
-  if (!resp.location) {
+  if (!resp.location || !resp.nonce) {
     console.error("login failed", res);
     return undefined;
   }
   const serviceToken = await _getServiceToken(
     resp.location,
-    resp.nonce!,
+    resp.nonce,
     resp.ssecurity!
   );
   if (!serviceToken) {
     return undefined;
   }
-  return {
-    userId: resp.userId!,
-    passToken: resp.passToken!,
-    ssecurity: resp.ssecurity!,
+  account = {
+    ...account,
+    passToken: resp.passToken,
+    ssecurity: resp.ssecurity,
     serviceToken: serviceToken,
-    deviceId: opt.deviceId,
+    deviceId: account.deviceId,
   };
+  if (!account.device?.deviceSNProfile) {
+    account.device = await MiNA.getDevice(account);
+  }
+  return account;
 }
 
-function _getLoginCookies(opt: GetAccountOption) {
+function _getLoginCookies(account: MiAccount) {
   return {
-    userId: opt.username,
-    passToken: opt.passToken,
-    // 此处我们直接取音响的 deviceId 作为登陆设备的 deviceId
-    deviceId: "an_" + opt.deviceId.replaceAll("-", ""),
+    userId: account.username,
+    passToken: account.passToken,
+    deviceId: getLoginDeviceId(account.deviceId),
     sdkVersion: "accountsdk-2020.01.09",
   };
 }

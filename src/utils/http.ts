@@ -3,7 +3,6 @@ import { isNotEmpty } from "./is";
 
 const _baseConfig: CreateAxiosDefaults = {
   timeout: 10 * 1000,
-  responseType: "arraybuffer",
   decompress: true,
   headers: {
     "Accept-Encoding": "gzip, deflate",
