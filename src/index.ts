@@ -3,9 +3,9 @@ import { MiNA } from "./mi/mina";
 import { MiIOT } from "./mi/miot";
 
 interface MiServiceConfig {
-  username: string;
+  userId: string;
   password: string;
-  deviceId?: string;
+  did?: string;
 }
 
 export async function getMiIOT(

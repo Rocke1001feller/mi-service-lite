@@ -1,31 +1,8 @@
 import { md5, sha1 } from "../utils/hash";
 import { Http } from "../utils/http";
-import {
-  encodeQuery,
-  getLoginDeviceId,
-  parseLoginResponse,
-} from "../utils/codec";
+import { encodeQuery, parseLoginResponse } from "../utils/codec";
 import { MiNA } from "./mina";
-
-export interface Device {
-  hardware: string;
-  deviceId: string;
-  serialNumber: string;
-  deviceSNProfile: string;
-}
-
-export interface MiAccount {
-  sid: "xiaomiio" | "micoapi";
-  username: string;
-  password: string;
-  // 登录凭证
-  passToken?: string;
-  ssecurity?: string;
-  serviceToken?: string;
-  // 音响设备信息
-  deviceId: string;
-  device?: Device;
-}
+import { MiAccount } from "./types";
 
 const kLoginAPI = "https://account.xiaomi.com/pass";
 
@@ -51,7 +28,7 @@ export async function getAccount(
       _sign: resp._sign,
       callback: resp.callback,
       cc: "+86",
-      user: account.username,
+      user: account.userId,
       hash: md5(account.password).toUpperCase(),
     };
     res = await Http.post(`${kLoginAPI}/serviceLoginAuth2`, encodeQuery(data), {
@@ -80,7 +57,6 @@ export async function getAccount(
     passToken: resp.passToken,
     ssecurity: resp.ssecurity,
     serviceToken: serviceToken,
-    deviceId: account.deviceId,
   };
   if (!account.device?.deviceSNProfile) {
     account.device = await MiNA.getDevice(account);
@@ -90,10 +66,9 @@ export async function getAccount(
 
 function _getLoginCookies(account: MiAccount) {
   return {
-    userId: account.username,
+    userId: account.userId,
     passToken: account.passToken,
-    deviceId: getLoginDeviceId(account.deviceId),
-    sdkVersion: "accountsdk-2020.01.09",
+    deviceId: account.deviceId,
   };
 }
 

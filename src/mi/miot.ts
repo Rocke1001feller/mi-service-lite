@@ -1,7 +1,7 @@
 import { decodeMiIOT, encodeMiIOT, encodeQuery } from "../utils/codec";
 import { Http } from "../utils/http";
 import { jsonDecode } from "../utils/json";
-import { MiAccount } from "./account";
+import { MiAccount } from "./types";
 
 export class MiIOT {
   account: MiAccount;
@@ -22,11 +22,11 @@ export class MiIOT {
         "miot-encrypt-algorithm": "ENCRYPT-RC4",
       },
       cookies: {
-        userId: this.account.username,
-        deviceId: this.account.deviceId,
+        userId: this.account.userId,
         serviceToken: this.account.serviceToken,
-        hardware: this.account.device?.hardware,
         sn: this.account.device?.serialNumber,
+        hardware: this.account.device?.hardware,
+        deviceId: this.account.device?.deviceId,
         deviceSNProfile: this.account.device?.deviceSNProfile,
       },
     };

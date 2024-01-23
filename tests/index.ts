@@ -7,9 +7,9 @@ dotenv.config();
 async function main() {
   console.log("hello world!", process.env.MI_USER);
   const MiIOT = await getMiNA({
-    username: process.env.MI_USER!,
+    userId: process.env.MI_USER!,
     password: process.env.MI_PASS!,
-    deviceId: process.env.MI_DID,
+    did: process.env.MI_DID,
   });
   const devices = await MiIOT?.getDevices();
   console.log("devices", devices);

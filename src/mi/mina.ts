@@ -2,26 +2,7 @@ import { encodeQuery } from "../utils/codec";
 import { uuid } from "../utils/hash";
 import { Http } from "../utils/http";
 import { jsonDecode, jsonEncode } from "../utils/json";
-import { MiAccount } from "./account";
-
-interface Conversations {
-  bitSet: [number, number, number];
-  records: {
-    bitSet: [number, number, number, number, number];
-    answers: {
-      bitSet: [number, number, number, number, number];
-      type: string;
-      tts: {
-        bitSet: number[];
-        text: string;
-      };
-    }[];
-    time: number; // 秒
-    query: string; // 请求指令
-    requestId: string;
-  }[];
-  nextEndTime: number;
-}
+import { MiAccount, MiConversations } from "./types";
 
 export class MiNA {
   account: MiAccount;
@@ -36,16 +17,13 @@ export class MiNA {
       "GET",
       "/admin/v2/device_list"
     );
-    const d = (devices ?? []).find((e: any) => (e.deviceID = account.deviceId));
+    const d = (devices ?? []).find((e: any) =>
+      [e.deviceID, e.name, e.alias].includes(account.did)
+    );
     if (!d) {
       return undefined;
     }
-    return {
-      deviceId: d.deviceID,
-      hardware: d.hardware,
-      serialNumber: d.serialNumber,
-      deviceSNProfile: d.deviceSNProfile,
-    };
+    return { ...d, deviceId: d.deviceID };
   }
 
   private static async __callMina(
@@ -63,11 +41,11 @@ export class MiNA {
     const config = {
       headers: { "User-Agent": "MICO/AndroidApp/@SHIP.TO.2A2FE0D7@/2.4.40" },
       cookies: {
-        userId: account.username,
-        deviceId: account.deviceId,
+        userId: account.userId,
         serviceToken: account.serviceToken,
-        hardware: account.device?.hardware,
         sn: account.device?.serialNumber,
+        hardware: account.device?.hardware,
+        deviceId: account.device?.deviceId,
         deviceSNProfile: account.device?.deviceSNProfile,
       },
     };
@@ -95,7 +73,7 @@ export class MiNA {
   private _callUbus(method: string, path: string, message: any) {
     message = jsonEncode(message);
     return this._callMina("POST", "/remote/ubus", {
-      deviceId: this.account.deviceId,
+      deviceId: this.account.device?.deviceId,
       path,
       method,
       message,
@@ -141,7 +119,10 @@ export class MiNA {
     });
   }
 
-  async getConversations(limit = 10): Promise<Conversations | undefined> {
+  /**
+   * 消息从新到旧排序
+   */
+  async getConversations(limit = 10): Promise<MiConversations | undefined> {
     const res = await Http.get(
       "https://userprofile.mina.mi.com/device_profile/v2/conversation",
       {
@@ -157,9 +138,9 @@ export class MiNA {
           Referer: "https://userprofile.mina.mi.com/dialogue-note/index.html",
         },
         cookies: {
-          userId: this.account.username,
-          deviceId: this.account.deviceId,
+          userId: this.account.userId,
           serviceToken: this.account.serviceToken,
+          deviceId: this.account.device?.deviceId,
         },
       }
     );

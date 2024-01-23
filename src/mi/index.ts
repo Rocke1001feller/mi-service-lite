@@ -1,8 +1,9 @@
 import { readJSON, writeJSON } from "../utils/io";
 import { uuid } from "../utils/hash";
-import { MiAccount, getAccount } from "./account";
+import { getAccount } from "./account";
 import { MiIOT } from "./miot";
 import { MiNA } from "./mina";
+import { MiAccount } from "./types";
 
 interface Store {
   miiot?: MiAccount;
@@ -12,18 +13,20 @@ const kConfigFile = ".mi.json";
 
 export async function getMiService(config: {
   service: "miiot" | "mina";
-  username: string;
+  userId: string;
   password: string;
-  deviceId?: string;
+  did?: string;
 }) {
-  const { service, username, password, deviceId = uuid() } = config;
+  const randomDeviceId = "android_" + uuid();
+  const { service, userId, password, did } = config;
   let account: MiAccount | undefined;
   const store: Store = (await readJSON(kConfigFile)) ?? {};
   account = await getAccount({
+    deviceId: randomDeviceId,
     ...store[service],
-    username,
+    did,
+    userId,
     password,
-    deviceId,
     sid: service === "miiot" ? "xiaomiio" : "micoapi",
   });
   if (!account?.serviceToken) {
