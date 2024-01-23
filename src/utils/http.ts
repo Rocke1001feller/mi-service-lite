@@ -2,6 +2,7 @@ import axios, { AxiosRequestConfig, CreateAxiosDefaults } from "axios";
 import { isNotEmpty } from "./is";
 
 const _baseConfig: CreateAxiosDefaults = {
+  proxy: false,
   timeout: 10 * 1000,
   decompress: true,
   headers: {
