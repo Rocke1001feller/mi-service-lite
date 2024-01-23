@@ -2,7 +2,8 @@ import { md5, sha1 } from "../utils/hash";
 import { Http } from "../utils/http";
 import { encodeQuery, parseAuthPass } from "../utils/codec";
 import { MiNA } from "./mina";
-import { MiAccount, MiPass } from "./types";
+import { MiAccount, MiIOTDevice, MiPass, MinaDevice } from "./types";
+import { MiIOT } from "./miot";
 
 const kLoginAPI = "https://account.xiaomi.com/pass";
 
@@ -20,7 +21,7 @@ export async function getAccount(
   }
   let pass = parseAuthPass(res);
   if (pass.code !== 0) {
-    // 登陆态失效，重新登录
+    // 登录态失效，重新登录
     let data = {
       _json: "true",
       qs: pass.qs,
@@ -44,13 +45,26 @@ export async function getAccount(
     console.error("login failed", res);
     return undefined;
   }
+  // 刷新登录态
   const serviceToken = await _getServiceToken(pass);
   if (!serviceToken) {
     return undefined;
   }
   account = { ...account, pass, serviceToken };
-  if (!account.device?.deviceSNProfile) {
-    account.device = await MiNA.getDevice(account);
+  if (
+    account.sid === "micoapi" &&
+    !(account.device as MinaDevice)?.deviceSNProfile
+  ) {
+    account.device = await MiNA.getDevice(account as any);
+  } else if (
+    account.sid === "xiaomiio" &&
+    !(account.device as MiIOTDevice)?.did
+  ) {
+    account.device = await MiIOT.getDevice(account as any);
+  }
+  if (account.did && !account.device) {
+    console.error("找不到设备：" + account.did);
+    return undefined;
   }
   return account;
 }

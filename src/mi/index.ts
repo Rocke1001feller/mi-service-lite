@@ -34,5 +34,7 @@ export async function getMiService(config: {
   }
   store[service] = account;
   await writeJSON(kConfigFile, store);
-  return service === "miiot" ? new MiIOT(account) : new MiNA(account);
+  return service === "miiot"
+    ? new MiIOT(account as any)
+    : new MiNA(account as any);
 }

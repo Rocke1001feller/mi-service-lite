@@ -21,6 +21,19 @@ export function parseAuthPass(res: string): {
   }
 }
 
+export function encodeQuery(
+  data: Record<string, string | number | boolean | undefined>
+): string {
+  return Object.entries(data)
+    .map(
+      ([key, value]) =>
+        encodeURIComponent(key) +
+        "=" +
+        encodeURIComponent(value == null ? "" : value.toString())
+    )
+    .join("&");
+}
+
 export function decodeQuery(str: string) {
   var data: any = {};
   if (!str) {
@@ -41,39 +54,6 @@ export function decodeQuery(str: string) {
     data[k] = v;
   }
   return data;
-}
-
-export function decodeMiIOT(
-  ssecurity: string,
-  nonce: string,
-  data: string,
-  gzip?: boolean
-): Promise<string | undefined> {
-  let key = Buffer.from(signNonce(ssecurity, nonce), "base64");
-  let rc4 = new RC4(key);
-  rc4.update(Buffer.alloc(1024));
-  let decrypted = rc4.update(Buffer.from(data, "base64"));
-  if (gzip) {
-    try {
-      return Promise.resolve(pako.ungzip(decrypted, { to: "string" }));
-    } catch (err) {
-      return Promise.reject(err);
-    }
-  }
-  return Promise.resolve(decrypted.toString());
-}
-
-export function encodeQuery(
-  data: Record<string, string | number | boolean | undefined>
-): string {
-  return Object.entries(data)
-    .map(
-      ([key, value]) =>
-        encodeURIComponent(key) +
-        "=" +
-        encodeURIComponent(value == null ? "" : value.toString())
-    )
-    .join("&");
 }
 
 interface MiIOTRequest {
@@ -106,4 +86,30 @@ export function encodeMiIOT(
   map._nonce = nonce;
   map.ssecurity = ssecurity;
   return map;
+}
+
+export function decodeMiIOT(
+  ssecurity: string,
+  nonce: string,
+  data: string,
+  gzip?: boolean
+): Promise<string | undefined> {
+  let key = Buffer.from(signNonce(ssecurity, nonce), "base64");
+  let rc4 = new RC4(key);
+  rc4.update(Buffer.alloc(1024));
+  let decrypted = rc4.update(Buffer.from(data, "base64"));
+  if (gzip) {
+    try {
+      return Promise.resolve(pako.ungzip(decrypted, { to: "string" }));
+    } catch (err) {
+      console.error("decodeMiIOT failed", err);
+    }
+  }
+  const jsonStr = decrypted.toString();
+  const isJson =
+    jsonStr.includes("{") &&
+    jsonStr.includes("}") &&
+    jsonStr.includes(":") &&
+    jsonStr.includes('"');
+  return Promise.resolve(isJson ? jsonStr : undefined);
 }

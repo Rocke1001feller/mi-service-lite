@@ -2,16 +2,20 @@ import { encodeQuery } from "../utils/codec";
 import { uuid } from "../utils/hash";
 import { Http } from "../utils/http";
 import { jsonDecode, jsonEncode } from "../utils/json";
-import { MiAccount, MiConversations } from "./types";
+import { MiAccount, MiConversations, MinaDevice } from "./types";
+
+type MinaMiAccount = MiAccount & { device: MinaDevice };
 
 export class MiNA {
-  account: MiAccount;
+  account: MinaMiAccount;
 
-  constructor(account: MiAccount) {
-    this.account = account;
+  constructor(account: MinaMiAccount) {
+    this.account = account as any;
   }
 
-  static async getDevice(account: MiAccount) {
+  static async getDevice(
+    account: MinaMiAccount
+  ): Promise<MinaDevice | undefined> {
     const devices = await this.__callMina(
       account,
       "GET",
@@ -27,7 +31,7 @@ export class MiNA {
   }
 
   private static async __callMina(
-    account: MiAccount,
+    account: MinaMiAccount,
     method: "GET" | "POST",
     path: string,
     data?: any

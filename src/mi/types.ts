@@ -11,7 +11,23 @@ export type MiPass = Partial<{
   psecurity: string;
 }>;
 
-export interface MiDevice {
+export interface MiIOTDevice {
+  did: string;
+  token: string;
+  name: string;
+  localip: string;
+  mac: string;
+  ssid: string;
+  bssid: string;
+  model: string;
+  isOnline: boolean;
+  desc: string;
+  uid: number;
+  pd_id: number;
+  rssi: number;
+}
+
+export interface MinaDevice {
   deviceId: string;
   deviceID: string;
   serialNumber: string;
@@ -38,7 +54,7 @@ export interface MiAccount {
   serviceToken?: string;
   // 音响设备信息
   did?: string; // 音响设备 id 或 name
-  device?: MiDevice; // 根据 did 查找到的 deviceInfo
+  device?: MinaDevice | MiIOTDevice; // 根据 did 查找到的 deviceInfo
 }
 
 // TTS 文本回应
