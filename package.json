@@ -17,8 +17,8 @@
     "mi-service"
   ],
   "scripts": {
-    "prepublish": "npm run build",
-    "build": "tsc --module CommonJS && cd dist && mv \"index.js\" \"index.cjs\" && cd ../ && tsc --module esnext"
+    "build": "tsup",
+    "prepublish": "npm run build"
   },
   "dependencies": {
     "axios": "^1.6.5",
@@ -29,7 +29,11 @@
     "@types/pako": "^2.0.3",
     "dotenv": "^16.3.2",
     "ts-node": "^10.9.2",
+    "tsup": "^8.0.1",
     "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=16"
   },
   "sideEffects": false,
   "files": [
