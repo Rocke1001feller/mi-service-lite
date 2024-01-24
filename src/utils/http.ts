@@ -36,6 +36,7 @@ _http.interceptors.response.use(
     return res.data;
   },
   (err) => {
+    // todo auto re-login（maxRetry=3）
     const error = err.response?.data?.error ?? err.response?.data ?? err;
     const apiError: HttpError = {
       error: err,

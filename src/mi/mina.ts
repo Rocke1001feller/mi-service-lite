@@ -13,21 +13,22 @@ export class MiNA {
     this.account = account as any;
   }
 
-  static async getDevice(
-    account: MinaMiAccount
-  ): Promise<MinaDevice | undefined> {
+  static async getDevice(account: MinaMiAccount): Promise<MinaMiAccount> {
+    if (account.sid !== "micoapi") {
+      return account;
+    }
     const devices = await this.__callMina(
       account,
       "GET",
       "/admin/v2/device_list"
     );
-    const d = (devices ?? []).find((e: any) =>
+    const device = (devices ?? []).find((e: any) =>
       [e.deviceID, e.name, e.alias].includes(account.did)
     );
-    if (!d) {
-      return undefined;
+    if (device) {
+      account.device = { ...device, deviceId: device.deviceID };
     }
-    return { ...d, deviceId: d.deviceID };
+    return account;
   }
 
   private static async __callMina(

@@ -2,7 +2,7 @@
   "name": "mi-service-lite",
   "version": "1.0.0",
   "type": "module",
-  "description": "XiaoMi Cloud Service for mi.com This is a fork from https://github.com/inu1255/mi-service",
+  "description": "XiaoMi Cloud Service for mi.com",
   "license": "MIT",
   "author": {
     "name": "Del Wang",

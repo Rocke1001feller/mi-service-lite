@@ -93,23 +93,22 @@ export function decodeMiIOT(
   nonce: string,
   data: string,
   gzip?: boolean
-): Promise<string | undefined> {
+): Promise<any | undefined> {
   let key = Buffer.from(signNonce(ssecurity, nonce), "base64");
   let rc4 = new RC4(key);
   rc4.update(Buffer.alloc(1024));
   let decrypted = rc4.update(Buffer.from(data, "base64"));
+  let error = undefined;
   if (gzip) {
     try {
       return Promise.resolve(pako.ungzip(decrypted, { to: "string" }));
     } catch (err) {
-      console.error("decodeMiIOT failed", err);
+      error = err;
     }
   }
-  const jsonStr = decrypted.toString();
-  const isJson =
-    jsonStr.includes("{") &&
-    jsonStr.includes("}") &&
-    jsonStr.includes(":") &&
-    jsonStr.includes('"');
-  return Promise.resolve(isJson ? jsonStr : undefined);
+  const res = jsonDecode(decrypted.toString());
+  if (!res) {
+    console.error("decodeMiIOT failed", error);
+  }
+  return Promise.resolve(res);
 }

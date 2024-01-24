@@ -1,6 +1,5 @@
 import { decodeMiIOT, encodeMiIOT, encodeQuery } from "../utils/codec";
 import { Http } from "../utils/http";
-import { jsonDecode } from "../utils/json";
 import { MiAccount, MiIOTDevice } from "./types";
 
 type MiIOTMiAccount = MiAccount & { device: MiIOTDevice };
@@ -12,19 +11,21 @@ export class MiIOT {
     this.account = account;
   }
 
-  static async getDevice(
-    account: MiIOTMiAccount,
-    getVirtualModel = false,
-    getHuamiDevices = 0
-  ): Promise<MiIOTDevice | undefined> {
+  static async getDevice(account: MiIOTMiAccount): Promise<MiIOTMiAccount> {
+    if (account.sid !== "xiaomiio") {
+      return account;
+    }
     const res = await this.__calMiIO(account, "POST", "/home/device_list", {
-      getVirtualModel: getVirtualModel,
-      getHuamiDevices: getHuamiDevices,
+      getVirtualModel: false,
+      getHuamiDevices: 0,
     });
     const device = (res?.list ?? []).find((e: any) =>
       [e.did, e.name].includes(account.did)
     );
-    return device;
+    if (device) {
+      account.device = device;
+    }
+    return account;
   }
 
   private static async __calMiIO(
@@ -72,7 +73,7 @@ export class MiIOT {
       res.data,
       res.headers["miot-content-encoding"] === "GZIP"
     );
-    return jsonDecode(res)?.result;
+    return res?.result;
   }
 
   private async _calMiIO(method: "GET" | "POST", path: string, data?: any) {

@@ -51,17 +51,8 @@ export async function getAccount(
     return undefined;
   }
   account = { ...account, pass, serviceToken };
-  if (
-    account.sid === "micoapi" &&
-    !(account.device as MinaDevice)?.deviceSNProfile
-  ) {
-    account.device = await MiNA.getDevice(account as any);
-  } else if (
-    account.sid === "xiaomiio" &&
-    !(account.device as MiIOTDevice)?.did
-  ) {
-    account.device = await MiIOT.getDevice(account as any);
-  }
+  account = await MiNA.getDevice(account as any);
+  account = await MiIOT.getDevice(account as any);
   if (account.did && !account.device) {
     console.error("找不到设备：" + account.did);
     return undefined;
