@@ -97,11 +97,11 @@ export function decodeMiIOT(
   let key = Buffer.from(signNonce(ssecurity, nonce), "base64");
   let rc4 = new RC4(key);
   rc4.update(Buffer.alloc(1024));
-  let decrypted = rc4.update(Buffer.from(data, "base64"));
+  let decrypted: any = rc4.update(Buffer.from(data, "base64"));
   let error = undefined;
   if (gzip) {
     try {
-      return Promise.resolve(pako.ungzip(decrypted, { to: "string" }));
+      decrypted = pako.ungzip(decrypted, { to: "string" });
     } catch (err) {
       error = err;
     }
