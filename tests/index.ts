@@ -17,7 +17,8 @@ async function main() {
   const miServices = await getMiServices(config);
   // await testGetDevices(miServices);
   // await testSpeakerStatus(miServices);
-  await testPlayPause(miServices);
+  // await testPlayPause(miServices);
+  await testVolume(miServices);
 }
 
 main();
@@ -25,6 +26,16 @@ main();
 interface MiServices {
   MiNA: MiNA;
   MiIOT: MiIOT;
+}
+
+async function testVolume(miServices: MiServices) {
+  const { MiNA, MiIOT } = miServices;
+  let volume = await MiNA.getVolume();
+  console.log("Volume", volume);
+  const res = await MiNA.setVolume(50);
+  console.log("setVolume", res);
+  volume = await MiNA.getVolume();
+  console.log("Volume", volume);
 }
 
 async function testPlayPause(miServices: MiServices) {

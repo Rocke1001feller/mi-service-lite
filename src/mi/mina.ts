@@ -1,3 +1,4 @@
+import { clamp } from "../utils/base";
 import { encodeQuery } from "../utils/codec";
 import { uuid } from "../utils/hash";
 import { Http } from "../utils/http";
@@ -112,28 +113,33 @@ export class MiNA {
     return data?.volume;
   }
 
-  setVolume(volume: number) {
-    return this._callUbus("player_set_volume", "mediaplayer", {
+  async setVolume(volume: number) {
+    volume = Math.round(clamp(volume, 0, 100));
+    const res = await this._callUbus("player_set_volume", "mediaplayer", {
       volume: volume,
     });
+    return res?.code === 0;
   }
 
-  play() {
-    return this._callUbus("player_play_operation", "mediaplayer", {
+  async play() {
+    const res = await this._callUbus("player_play_operation", "mediaplayer", {
       action: "play",
     });
+    return res?.code === 0;
   }
 
-  pause() {
-    return this._callUbus("player_play_operation", "mediaplayer", {
+  async pause() {
+    const res = await this._callUbus("player_play_operation", "mediaplayer", {
       action: "pause",
     });
+    return res?.code === 0;
   }
 
-  toggle() {
-    return this._callUbus("player_play_operation", "mediaplayer", {
+  async toggle() {
+    const res = await this._callUbus("player_play_operation", "mediaplayer", {
       action: "toggle",
     });
+    return res?.code === 0;
   }
 
   playURL(url: string) {

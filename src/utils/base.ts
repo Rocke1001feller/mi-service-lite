@@ -29,3 +29,7 @@ export const range = (start: number, end?: number) => {
 };
 
 export const toSet = <T = any>(items: T[]) => Array.from(new Set(items));
+
+export function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(n, max));
+}
