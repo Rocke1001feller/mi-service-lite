@@ -100,10 +100,10 @@ export class MiNA {
     if (!data || data.code !== 0 || !res) {
       return;
     }
-    const km = { 0: "idle", 1: "playing", 2: "paused" } as any;
+    const map = { 0: "idle", 1: "playing", 2: "paused", 3: "loading" } as any;
     return {
       ...res,
-      status: km[res.status],
+      status: map[res.status],
       volume: res.volume,
     };
   }
@@ -142,18 +142,23 @@ export class MiNA {
     return res?.code === 0;
   }
 
-  playURL(url: string) {
-    return this._callUbus("player_play_url", "mediaplayer", {
+  async playURL(url: string) {
+    const res = await this._callUbus("player_play_url", "mediaplayer", {
       url: url,
       type: 1,
     });
+    return res?.code === 0;
   }
 
-  playTTS(text: string) {
-    return this._callUbus("text_to_speech", "mibrain", {
+  async playTTS(text: string) {
+    const res = await this._callUbus("text_to_speech", "mibrain", {
       text: text,
+      save: 0,
     });
+    return res?.code === 0;
   }
+
+  // todo 播放本地音频
 
   /**
    * 消息从新到旧排序

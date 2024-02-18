@@ -18,7 +18,8 @@ async function main() {
   // await testGetDevices(miServices);
   // await testSpeakerStatus(miServices);
   // await testPlayPause(miServices);
-  await testVolume(miServices);
+  // await testVolume(miServices);
+  await testPlayAudio(miServices);
 }
 
 main();
@@ -26,6 +27,19 @@ main();
 interface MiServices {
   MiNA: MiNA;
   MiIOT: MiIOT;
+}
+
+async function testPlayAudio(miServices: MiServices) {
+  const { MiNA, MiIOT } = miServices;
+  await MiNA.playURL(
+    "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_hz_ihsph/ljhwZthlaukjlkulzlp/portal/tts/BV406_V5_%E9%80%9A%E7%94%A8.wav"
+  );
+  let status = await MiNA.getStatus();
+  console.log("playURL", status);
+  await sleep(5 * 1000);
+  await MiNA.playTTS("Hello world! 很高兴认识你！");
+  status = await MiNA.getStatus();
+  console.log("playTTS", status);
 }
 
 async function testVolume(miServices: MiServices) {
