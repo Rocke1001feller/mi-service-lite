@@ -89,14 +89,38 @@ export class MiNA {
     return this._callMina("GET", "/admin/v2/device_list");
   }
 
-  getStatus() {
-    return this._callUbus("player_get_play_status", "mediaplayer", {});
+  async getStatus() {
+    const data = await this._callUbus(
+      "player_get_play_status",
+      "mediaplayer",
+      {}
+    );
+    const res = jsonDecode(data?.info);
+    if (!data || data.code !== 0 || !res) {
+      return;
+    }
+    const km = { 0: "idle", 1: "playing", 2: "paused" } as any;
+    return {
+      ...res,
+      status: km[res.status],
+      volume: res.volume,
+    };
   }
 
-  play(url: string) {
-    return this._callUbus("player_play_url", "mediaplayer", {
-      url: url,
-      type: 1,
+  async getVolume() {
+    const data = await this.getStatus();
+    return data?.volume;
+  }
+
+  setVolume(volume: number) {
+    return this._callUbus("player_set_volume", "mediaplayer", {
+      volume: volume,
+    });
+  }
+
+  play() {
+    return this._callUbus("player_play_operation", "mediaplayer", {
+      action: "play",
     });
   }
 
@@ -106,21 +130,22 @@ export class MiNA {
     });
   }
 
-  resume() {
+  toggle() {
     return this._callUbus("player_play_operation", "mediaplayer", {
-      action: "play",
+      action: "toggle",
     });
   }
 
-  tts(text: string) {
+  playURL(url: string) {
+    return this._callUbus("player_play_url", "mediaplayer", {
+      url: url,
+      type: 1,
+    });
+  }
+
+  playTTS(text: string) {
     return this._callUbus("text_to_speech", "mibrain", {
       text: text,
-    });
-  }
-
-  setVolume(volume: number) {
-    return this._callUbus("player_set_volume", "mediaplayer", {
-      volume: volume,
     });
   }
 
