@@ -173,7 +173,7 @@ export class MiNA {
     limit?: number;
     timestamp?: number;
   }): Promise<MiConversations | undefined> {
-    const { limit = 10, timestamp = Date.now() } = options ?? {};
+    const { limit = 10, timestamp } = options ?? {};
     const res = await Http.get(
       "https://userprofile.mina.mi.com/device_profile/v2/conversation",
       {

@@ -37,7 +37,7 @@ export class XiaoAiSpeaker {
 
   async askLLM(msg: any) {
     // todo
-    return "hello";
+    return msg;
   }
 
   async onMessage(msg: any) {
@@ -69,17 +69,19 @@ export class XiaoAiSpeaker {
         const doubaoTTS = process.env.TTS_DOUBAO;
         const url = `${doubaoTTS}?speaker=${speaker}&text=${text}`;
         await this.MiNA!.play({ url });
+        break;
       case "xiaoai":
       default:
         await this.MiNA!.play({ tts: text });
+        break;
     }
     // 等待回答播放完毕
     while (true) {
-      await sleep(this.heartbeat);
       const res = await this.MiNA!.getStatus();
-      if (res.status !== "playing") {
+      if (res?.status && res.status !== "playing") {
         break;
       }
+      await sleep(this.heartbeat);
     }
     // 保持唤醒状态
     if (keepAlive) {
@@ -94,7 +96,7 @@ export class XiaoAiSpeaker {
     this.pipe = new OnMessagePipe();
     this.pipe.add(async (msg, data) => {
       // 暂停当前的响应
-      this.MiNA!.pause();
+      await this.MiNA!.pause();
     });
     this.pipe.add(async (msg, data) => {
       // 思考中

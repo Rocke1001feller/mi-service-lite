@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { MiNA } from "../src/mi/mina";
 import { MiIOT } from "../src/mi/miot";
 import { sleep } from "../src/utils/base";
+import { XiaoAiSpeaker } from "../src/xiaoai/speaker";
 
 dotenv.config();
 
@@ -14,15 +15,27 @@ async function main() {
     password: process.env.MI_PASS!,
     did: process.env.MI_DID,
   };
-  const miServices = await getMiServices(config);
+
+  // const miServices = await getMiServices(config);
   // await testGetDevices(miServices);
   // await testSpeakerStatus(miServices);
   // await testPlayPause(miServices);
   // await testVolume(miServices);
-  await testPlayAudio(miServices);
+  // await testPlayAudio(miServices);
+
+  const speaker = new XiaoAiSpeaker(config);
+  await testXiaoAiSpeaker(speaker);
 }
 
 main();
+
+async function testXiaoAiSpeaker(speaker: XiaoAiSpeaker) {
+  //
+  await speaker.getLastMessage();
+  await speaker.onMessage("你好，我是豆包，很高兴认识你！");
+  
+  console.log("finished");
+}
 
 interface MiServices {
   MiNA: MiNA;
