@@ -1,7 +1,8 @@
 import { clamp } from "../utils/base";
-import { encodeQuery } from "../utils/codec";
+import { encodeBase64, encodeQuery } from "../utils/codec";
 import { uuid } from "../utils/hash";
 import { Http } from "../utils/http";
+import { getExtname, readFile } from "../utils/io";
 import { jsonDecode, jsonEncode } from "../utils/json";
 import { MiAccount, MiConversations, MinaDevice } from "./types";
 
@@ -76,12 +77,12 @@ export class MiNA {
     return MiNA.__callMina(this.account, method, path, data);
   }
 
-  private _callUbus(method: string, path: string, message: any) {
+  private _callUbus(scope: string, command: string, message: any) {
     message = jsonEncode(message);
     return this._callMina("POST", "/remote/ubus", {
       deviceId: this.account.device?.deviceId,
-      path,
-      method,
+      path: scope,
+      method: command,
       message,
     });
   }
@@ -92,8 +93,8 @@ export class MiNA {
 
   async getStatus() {
     const data = await this._callUbus(
-      "player_get_play_status",
       "mediaplayer",
+      "player_get_play_status",
       {}
     );
     const res = jsonDecode(data?.info);
@@ -115,50 +116,75 @@ export class MiNA {
 
   async setVolume(volume: number) {
     volume = Math.round(clamp(volume, 0, 100));
-    const res = await this._callUbus("player_set_volume", "mediaplayer", {
+    const res = await this._callUbus("mediaplayer", "player_set_volume", {
       volume: volume,
     });
     return res?.code === 0;
   }
 
-  async play() {
-    const res = await this._callUbus("player_play_operation", "mediaplayer", {
-      action: "play",
-    });
+  async play(options?: {
+    tts?: string;
+    url?: string;
+    file?: string;
+    local?: string;
+  }) {
+    let res;
+    const { tts, url, file, local } = options ?? {};
+    if (tts) {
+      res = await this._callUbus("mibrain", "text_to_speech", {
+        text: tts,
+        save: 0,
+      });
+    } else if (url) {
+      res = await this._callUbus("mediaplayer", "player_play_url", {
+        url,
+        type: 1,
+      });
+    } else if (file) {
+      const mimeType = getExtname(file);
+      const audioBytes = await readFile<string>(file, "base64");
+      const audioURL = `data:audio/${mimeType};base64,${audioBytes}`;
+      res = await this._callUbus("mediaplayer", "player_play_url", {
+        url: audioURL,
+        type: 1,
+      });
+    } else if (local) {
+      let path = local;
+      const pathBase64 = encodeBase64(path);
+      res = await this._callUbus("mediaplayer", "player_play_filepath", {
+        path,
+        pathBase64,
+        name: "media",
+        nameBase64: "bWVkaWE=",
+      });
+    } else {
+      res = await this._callUbus("mediaplayer", "player_play_operation", {
+        action: "play",
+      });
+    }
     return res?.code === 0;
   }
 
   async pause() {
-    const res = await this._callUbus("player_play_operation", "mediaplayer", {
+    const res = await this._callUbus("mediaplayer", "player_play_operation", {
       action: "pause",
     });
     return res?.code === 0;
   }
 
-  async toggle() {
-    const res = await this._callUbus("player_play_operation", "mediaplayer", {
+  async playOrPause() {
+    const res = await this._callUbus("mediaplayer", "player_play_operation", {
       action: "toggle",
     });
     return res?.code === 0;
   }
 
-  async playURL(url: string) {
-    const res = await this._callUbus("player_play_url", "mediaplayer", {
-      url: url,
-      type: 1,
+  async stop() {
+    const res = await this._callUbus("mediaplayer", "player_play_operation", {
+      action: "stop",
     });
     return res?.code === 0;
   }
-
-  async playTTS(text: string) {
-    const res = await this._callUbus("text_to_speech", "mibrain", {
-      text: text,
-      save: 0,
-    });
-    return res?.code === 0;
-  }
-
-  // todo 播放本地音频
 
   /**
    * 消息从新到旧排序

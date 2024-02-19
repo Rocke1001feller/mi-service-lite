@@ -4,6 +4,14 @@ import * as pako from "pako";
 import { jsonDecode, jsonEncode } from "./json";
 import { MiPass } from "../mi/types";
 
+export function encodeBase64(text: string) {
+  return Buffer.from(text).toString("base64");
+}
+
+export function decodeBase64(base64Encoded: string) {
+  return Buffer.from(base64Encoded, "base64").toString();
+}
+
 export function parseAuthPass(res: string): {
   code?: number;
   description?: string;

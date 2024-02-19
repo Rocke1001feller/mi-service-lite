@@ -9,6 +9,10 @@ export const kEnvs = process.env as any;
 
 export const exists = (filePath: string) => fs.existsSync(filePath);
 
+export const getFullPath = (filePath: string) => path.resolve(filePath);
+
+export const getExtname = (filePath: string) => path.extname(filePath).slice(1);
+
 export const deleteFile = (filePath: string) => {
   try {
     fs.rmSync(filePath);

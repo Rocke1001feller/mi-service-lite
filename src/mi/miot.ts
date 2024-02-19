@@ -88,8 +88,11 @@ export class MiIOT {
     });
   }
 
-  private _callMiIOT(cmd: string, params: any, datasource = 3) {
-    return this._calMiIO("POST", "/miotspec/" + cmd, { params, datasource });
+  private _callMiIOT(command: string, params: any, datasource = 3) {
+    return this._calMiIO("POST", "/miotspec/" + command, {
+      params,
+      datasource,
+    });
   }
 
   async getDevices(getVirtualModel = false, getHuamiDevices = 0) {
