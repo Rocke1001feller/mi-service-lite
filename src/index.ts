@@ -2,7 +2,7 @@ import { getMiService } from "./mi/index";
 import { MiNA } from "./mi/mina";
 import { MiIOT } from "./mi/miot";
 
-interface MiServiceConfig {
+export interface MiServiceConfig {
   userId: string;
   password: string;
   did?: string;

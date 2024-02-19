@@ -131,7 +131,7 @@ export class MiIOT {
     return (res ?? [])?.[0]?.code === 0;
   }
 
-  async doAction(scope: number, action: number, args = []) {
+  async doAction(scope: number, action: number, args: any = []) {
     const res = await this._callMiotSpec("action", {
       did: this.account.device.did,
       siid: scope,
