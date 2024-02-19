@@ -15,7 +15,7 @@ export class MiIOT {
     if (account.sid !== "xiaomiio") {
       return account;
     }
-    const res = await this.__calMiIO(account, "POST", "/home/device_list", {
+    const res = await this.__callMiIOT(account, "POST", "/home/device_list", {
       getVirtualModel: false,
       getHuamiDevices: 0,
     });
@@ -28,7 +28,7 @@ export class MiIOT {
     return account;
   }
 
-  private static async __calMiIO(
+  private static async __callMiIOT(
     account: MiIOTMiAccount,
     method: "GET" | "POST",
     path: string,
@@ -64,7 +64,7 @@ export class MiIOT {
       res = await Http.post(url, encodeQuery(data as any), config);
     }
     if (typeof res.data !== "string") {
-      console.error("_calMiIO failed", res);
+      console.error("_callMiIOT failed", res);
       return undefined;
     }
     res = await decodeMiIOT(
@@ -76,89 +76,68 @@ export class MiIOT {
     return res?.result;
   }
 
-  private async _calMiIO(method: "GET" | "POST", path: string, data?: any) {
-    return MiIOT.__calMiIO(this.account, method, path, data);
+  private async _callMiIOT(method: "GET" | "POST", path: string, data?: any) {
+    return MiIOT.__callMiIOT(this.account, method, path, data);
   }
 
-  private _callHome(method: string, params: any, id = 1) {
-    return this._calMiIO("POST", "/home/rpc/" + this.account.device.did, {
+  rpc(method: string, params: any, id = 1) {
+    return this._callMiIOT("POST", "/home/rpc/" + this.account.device.did, {
       id,
       method,
       params,
     });
   }
 
-  private _callMiIOT(command: string, params: any, datasource = 3) {
-    return this._calMiIO("POST", "/miotspec/" + command, {
+  /**
+   * - datasource=1  优先从服务器缓存读取，没有读取到下发rpc；不能保证取到的一定是最新值
+   * - datasource=2  直接下发rpc，每次都是设备返回的最新值
+   * - datasource=3  直接读缓存；没有缓存的 code 是 -70xxxx；可能取不到值
+   */
+  private _callMiotSpec(command: string, params: any, datasource = 1) {
+    return this._callMiIOT("POST", "/miotspec/" + command, {
       params,
       datasource,
     });
   }
 
   async getDevices(getVirtualModel = false, getHuamiDevices = 0) {
-    const res = await this._calMiIO("POST", "/home/device_list", {
+    const res = await this._callMiIOT("POST", "/home/device_list", {
       getVirtualModel: getVirtualModel,
       getHuamiDevices: getHuamiDevices,
     });
     return res?.list;
   }
 
-  getHomeProps(props: any) {
-    return this._callHome("get_prop", props);
+  async getProperty(scope: number, property: number) {
+    const res = await this._callMiotSpec("prop/get", [
+      {
+        did: this.account.device.did,
+        siid: scope,
+        piid: property,
+      },
+    ]);
+    return (res ?? [])?.[0]?.value;
   }
 
-  setHomeProps(props: any) {
-    return Promise.all(props.map((i: any) => this.setHomeProp(i[0], i[1])));
+  async setProperty(scope: number, property: number, value: any) {
+    const res = await this._callMiotSpec("prop/set", [
+      {
+        did: this.account.device.did,
+        siid: scope,
+        piid: property,
+        value: value,
+      },
+    ]);
+    return (res ?? [])?.[0]?.code === 0;
   }
 
-  getHomeProp(prop: string) {
-    return this.getHomeProps([prop]).then((result) => result[0]);
-  }
-
-  setHomeProp(prop: string, value: any) {
-    return this._callHome(
-      "set_" + prop,
-      Array.isArray(value) ? value : [value]
-    );
-  }
-
-  async getProps(iids: [number, number][]) {
-    const params = iids.map((i) => ({
+  async doAction(scope: number, action: number, args = []) {
+    const res = await this._callMiotSpec("action", {
       did: this.account.device.did,
-      siid: i[0],
-      piid: i[1],
-    }));
-    const res = await this._callMiIOT("prop/get", params);
-    return (res ?? []).map((it: any) => it["value"] || null);
-  }
-
-  async setProps(props: [number, number, any][]) {
-    const params = props.map((i) => ({
-      did: this.account.device.did,
-      siid: i[0],
-      piid: i[1],
-      value: i[2],
-    }));
-    const res = await this._callMiIOT("prop/set", params);
-    return res.map((it: any) => it["code"] || -1);
-  }
-
-  async getProp(iid: [number, number]) {
-    const res = await this.getProps([iid]);
-    return res?.[0];
-  }
-
-  async setProp(iid: [number, number], value: any) {
-    const res = await this.setProps([[iid[0], iid[1], value]]);
-    return res?.[0];
-  }
-
-  doAction(iid: [number, number], args = []) {
-    return this._callMiIOT("action", {
-      did: this.account.device.did,
-      siid: iid[0],
-      aiid: iid[1],
+      siid: scope,
+      aiid: action,
       in: args,
     });
+    return res?.code === 0;
   }
 }

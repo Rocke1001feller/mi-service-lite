@@ -77,8 +77,8 @@ export class MiNA {
     return MiNA.__callMina(this.account, method, path, data);
   }
 
-  private _callUbus(scope: string, command: string, message: any) {
-    message = jsonEncode(message);
+  private _callUbus(scope: string, command: string, message?: any) {
+    message = jsonEncode(message ?? {});
     return this._callMina("POST", "/remote/ubus", {
       deviceId: this.account.device?.deviceId,
       path: scope,
@@ -92,16 +92,12 @@ export class MiNA {
   }
 
   async getStatus() {
-    const data = await this._callUbus(
-      "mediaplayer",
-      "player_get_play_status",
-      {}
-    );
+    const data = await this._callUbus("mediaplayer", "player_get_play_status");
     const res = jsonDecode(data?.info);
     if (!data || data.code !== 0 || !res) {
       return;
     }
-    const map = { 0: "idle", 1: "playing", 2: "paused", 3: "loading" } as any;
+    const map = { 0: "idle", 1: "playing", 2: "paused", 3: "stopped" } as any;
     return {
       ...res,
       status: map[res.status],
