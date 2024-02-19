@@ -1,8 +1,7 @@
 import { clamp } from "../utils/base";
-import { encodeBase64, encodeQuery } from "../utils/codec";
+import { encodeQuery } from "../utils/codec";
 import { uuid } from "../utils/hash";
 import { Http } from "../utils/http";
-import { getExtname, readFile } from "../utils/io";
 import { jsonDecode, jsonEncode } from "../utils/json";
 import { MiAccount, MiConversations, MinaDevice } from "./types";
 
@@ -135,23 +134,6 @@ export class MiNA {
       res = await this._callUbus("mediaplayer", "player_play_url", {
         url,
         type: 1,
-      });
-    } else if (file) {
-      const mimeType = getExtname(file);
-      const audioBytes = await readFile<string>(file, "base64");
-      const audioURL = `data:audio/${mimeType};base64,${audioBytes}`;
-      res = await this._callUbus("mediaplayer", "player_play_url", {
-        url: audioURL,
-        type: 1,
-      });
-    } else if (local) {
-      let path = local;
-      const pathBase64 = encodeBase64(path);
-      res = await this._callUbus("mediaplayer", "player_play_filepath", {
-        path,
-        pathBase64,
-        name: "media",
-        nameBase64: "bWVkaWE=",
       });
     } else {
       res = await this._callUbus("mediaplayer", "player_play_operation", {
