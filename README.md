@@ -30,6 +30,8 @@ async function main() {
   const MiIOT = await getMiIOT(config);
   console.log("MiNA devices", await MiNA?.getDevices());
   console.log("MiIOT devices", await MiIOT?.getDevices());
+  // Find your device Spec here: https://home.miot-spec.com/
+  await MiIOT.doAction(5, 1, "Hello world, 你好！");
 }
 
 main();

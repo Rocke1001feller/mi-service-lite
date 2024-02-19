@@ -136,7 +136,7 @@ export class MiIOT {
       did: this.account.device.did,
       siid: scope,
       aiid: action,
-      in: args,
+      in: Array.isArray(args) ? args : [args],
     });
     return res?.code === 0;
   }
