@@ -183,13 +183,20 @@ export class MiNA {
   }
 
   /**
-   * 消息从新到旧排序
+   * - 从游标处由新到旧拉取
+   * - 结果包含游标消息本身
+   * - 消息列表从新到旧排序
    */
-  async getConversations(limit = 10): Promise<MiConversations | undefined> {
+  async getConversations(options?: {
+    limit?: number;
+    timestamp?: number;
+  }): Promise<MiConversations | undefined> {
+    const { limit = 10, timestamp = Date.now() } = options ?? {};
     const res = await Http.get(
       "https://userprofile.mina.mi.com/device_profile/v2/conversation",
       {
         limit,
+        timestamp,
         requestId: uuid(),
         source: "dialogu",
         hardware: this.account.device?.hardware,
