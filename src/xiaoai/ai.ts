@@ -1,4 +1,4 @@
-import { SpeakerMessage } from "../mi/types";
+import { UserMessage } from "../mi/types";
 import { pickOne } from "../utils/base";
 import { BaseSpeaker, BaseSpeakerConfig } from "./base";
 
@@ -8,7 +8,7 @@ type AnswerStep = (
 ) => Promise<{ stop?: boolean; data?: any } | void>;
 
 export type AISpeakerConfig = BaseSpeakerConfig & {
-  askAI: (msg: SpeakerMessage) => Promise<string>;
+  askAI: (msg: UserMessage) => Promise<string>;
 };
 
 export class AISpeaker extends BaseSpeaker {
@@ -57,7 +57,7 @@ export class AISpeaker extends BaseSpeaker {
     });
   }
 
-  async askAI2Answer(msg: SpeakerMessage) {
+  async askAI2Answer(msg: UserMessage) {
     this._currentMsgId++;
     const msgId = this._currentMsgId;
     let data = {};

@@ -99,9 +99,9 @@ export interface MiConversations {
   nextEndTime: number;
 }
 
-export interface SpeakerMessage {
+export interface UserMessage {
   text: string;
-  from: "bot" | "user";
+  answer: string;
   /**
    * 毫秒
    */
