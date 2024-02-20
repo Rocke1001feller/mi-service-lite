@@ -9,6 +9,18 @@ type AnswerStep = (
 
 export type AISpeakerConfig = BaseSpeakerConfig & {
   askAI: (msg: UserMessage) => Promise<string>;
+  /**
+   * AI 开始回答时的提示语
+   *
+   * 比如：请稍等，让我想想
+   */
+  onAIAsking?: string[];
+  /**
+   * AI 回答异常时的提示语
+   *
+   * 比如：出错了，请稍后再试吧！
+   */
+  onAIError?: string[];
 };
 
 export class AISpeaker extends BaseSpeaker {
@@ -22,16 +34,20 @@ export class AISpeaker extends BaseSpeaker {
 
   askAI: AISpeakerConfig["askAI"];
 
+  onAIError: string[];
+  onAIAsking: string[];
   constructor(config: AISpeakerConfig) {
     super(config);
     this.askAI = config.askAI;
+    this.onAIError = config.onAIError ?? ["啊哦，出错了，稍后再试吧！"];
+    this.onAIAsking = config.onAIAsking ?? ["让我想想", "请稍等"];
     this._askAI2AnswerSteps.push(async (msg, data) => {
       // 关闭小爱的回复
       await this.MiNA!.stop();
     });
     this._askAI2AnswerSteps.push(async (msg, data) => {
       // 思考中
-      await this.response(pickOne(["让我想想", "请稍等"])!, {
+      await this.response(pickOne(this.onAIAsking)!, {
         keepAlive: this.keepAlive,
       });
     });
@@ -43,7 +59,7 @@ export class AISpeaker extends BaseSpeaker {
     this._askAI2AnswerSteps.push(async (msg, data) => {
       if (!data.answer) {
         // 回复失败
-        await this.response(pickOne(["啊哦，出错了，稍后再试吧！"])!, {
+        await this.response(pickOne(this.onAIError)!, {
           keepAlive: this.keepAlive,
         });
         return { stop: true };

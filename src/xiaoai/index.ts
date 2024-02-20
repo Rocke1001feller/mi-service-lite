@@ -7,14 +7,72 @@ export type XiaoAiSpeakerConfig = AISpeakerConfig & {
    * 拉取消息心跳间隔，默认1秒，单位毫秒
    */
   heartbeat?: number;
+  /**
+   * 设备名称，用来唤醒/退出对话模式等
+   *
+   * 建议使用常见词语，避免使用多音字和容易混淆读音的词语
+   */
+  name?: string;
+  /**
+   * 召唤关键词
+   *
+   * 当消息中包含召唤关键词时，会调用 AI 来响应用户消息
+   *
+   * 比如：打开/进入/召唤豆包
+   */
+  callAIKeyWords?: string[];
+  /**
+   * 唤醒关键词
+   *
+   * 当消息中包含唤醒关键词时，会进入 AI 唤醒状态
+   *
+   * 比如：关闭/退出/再见豆包
+   */
+  wakeUpKeyWords?: string[];
+  /**
+   * 退出关键词
+   *
+   * 当消息中包含退出关键词时，会退出 AI 唤醒状态
+   */
+  exitKeywords?: string[];
+  /**
+   * 进入 AI 模式的欢迎语
+   *
+   * 比如：你好，我是豆包，请问有什么能够帮你的吗？
+   */
+  onEnterAI?: string[];
+  /**
+   * 退出 AI 模式的提示语
+   *
+   * 比如：豆包已退出
+   */
+  onExitAI?: string[];
 };
 
 export class XiaoAiSpeaker extends AISpeaker {
   heartbeat = 1000;
 
+  name: string;
+  callAIKeyWords: string[];
+  wakeUpKeyWords: string[];
+  exitKeywords: string[];
+  onEnterAI: string[];
+  onExitAI: string[];
+
   constructor(config: XiaoAiSpeakerConfig) {
     super(config);
     this.heartbeat = config.heartbeat ?? 1000;
+    this.name = config.name ?? "豆包";
+    this.callAIKeyWords = config.callAIKeyWords ?? [this.name];
+    this.wakeUpKeyWords =
+      config.wakeUpKeyWords ??
+      ["打开", "进入", "召唤"].map((e) => e + this.name);
+    this.exitKeywords =
+      config.exitKeywords ?? ["关闭", "退出", "再见"].map((e) => e + this.name);
+    this.onEnterAI = config.onEnterAI ?? [
+      `你好，我是${this.name}，很高兴为你服务！`,
+    ];
+    this.onExitAI = config.onExitAI ?? [`${this.name}已关闭！`];
   }
 
   private _status: "running" | "stopped" = "stopped";
@@ -45,7 +103,7 @@ export class XiaoAiSpeaker extends AISpeaker {
     await this.wakeUp();
     this.keepAlive = true;
     // 回应
-    await this.response(pickOne(["你好，我是豆包，很高兴为你服务！"])!, {
+    await this.response(pickOne(this.onEnterAI)!, {
       keepAlive: true,
     });
     const lastMsg = this._lastMsg?.timestamp;
@@ -63,20 +121,22 @@ export class XiaoAiSpeaker extends AISpeaker {
     // 退出唤醒状态
     this.keepAlive = false;
     // 回应
-    await this.response(pickOne(["豆包已关闭！"])!, {
+    await this.response(pickOne(this.onExitAI)!, {
       keepAlive: false,
     });
   }
 
   async onMessage(msg: UserMessage) {
-    if (["打开豆包", "进入豆包"].some((e) => msg.text.includes(e))) {
+    if (this.wakeUpKeyWords.some((e) => msg.text.includes(e))) {
       return this.enterKeepAlive();
     }
-    if (["关闭豆包", "退出豆包"].some((e) => msg.text.includes(e))) {
+    if (this.exitKeywords.some((e) => msg.text.includes(e))) {
       return this.exitKeepAlive();
     }
-    if (this.keepAlive || ["豆包"].some((e) => msg.text.includes(e))) {
-      // 使用 AI 响应用户请求
+    if (
+      this.keepAlive ||
+      this.callAIKeyWords.some((e) => msg.text.includes(e))
+    ) {
       await this.askAI2Answer(msg);
     }
   }
