@@ -98,3 +98,12 @@ export interface MiConversations {
   }[];
   nextEndTime: number;
 }
+
+export interface SpeakerMessage {
+  text: string;
+  from: "bot" | "user";
+  /**
+   * 毫秒
+   */
+  timestamp: number;
+}
