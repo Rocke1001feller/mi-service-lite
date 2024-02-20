@@ -26,8 +26,8 @@ export class AISpeaker extends BaseSpeaker {
     super(config);
     this.askAI = config.askAI;
     this._askAI2AnswerSteps.push(async (msg, data) => {
-      // 暂停当前的响应
-      await this.MiNA!.pause();
+      // 关闭小爱的回复
+      await this.MiNA!.stop();
     });
     this._askAI2AnswerSteps.push(async (msg, data) => {
       // 思考中

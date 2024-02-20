@@ -1,5 +1,5 @@
 import { UserMessage } from "../mi/types";
-import { firstOf, lastOf, sleep } from "../utils/base";
+import { firstOf, lastOf, pickOne, sleep } from "../utils/base";
 import { AISpeaker, AISpeakerConfig } from "./ai";
 
 export type XiaoAiSpeakerConfig = AISpeakerConfig & {
@@ -38,12 +38,47 @@ export class XiaoAiSpeaker extends AISpeaker {
     }
   }
 
-  async onMessage(msg: UserMessage) {
-    // todo 是否需要响应用户请求
-    // todo 会话模式开启/关闭（开启后3分钟内没有收到新的用户消息，则关闭）
+  async enterKeepAlive(): Promise<void> {
+    // 关闭小爱的回复
+    await this.MiNA!.stop();
+    // 唤醒
+    await this.wakeUp();
+    this.keepAlive = true;
+    // 回应
+    await this.response(pickOne(["你好，我是豆包，很高兴为你服务！"])!, {
+      keepAlive: true,
+    });
+    const lastMsg = this._lastMsg?.timestamp;
+    setTimeout(async () => {
+      if (this.keepAlive && lastMsg === this._lastMsg?.timestamp) {
+        // 1 分钟内没有收到新的用户消息，自动退出唤醒状态
+        await this.exitKeepAlive();
+      }
+    }, 60 * 1000);
+  }
 
-    // AI 响应用户请求
-    await this.askAI2Answer(msg);
+  async exitKeepAlive(): Promise<void> {
+    // 关闭小爱的回复
+    await this.MiNA!.stop();
+    // 退出唤醒状态
+    this.keepAlive = false;
+    // 回应
+    await this.response(pickOne(["豆包已关闭！"])!, {
+      keepAlive: false,
+    });
+  }
+
+  async onMessage(msg: UserMessage) {
+    if (["打开豆包", "进入豆包"].some((e) => msg.text.includes(e))) {
+      return this.enterKeepAlive();
+    }
+    if (["关闭豆包", "退出豆包"].some((e) => msg.text.includes(e))) {
+      return this.exitKeepAlive();
+    }
+    if (this.keepAlive || ["豆包"].some((e) => msg.text.includes(e))) {
+      // 使用 AI 响应用户请求
+      await this.askAI2Answer(msg);
+    }
   }
 
   _lastMsg?: UserMessage;
@@ -84,7 +119,7 @@ export class XiaoAiSpeaker extends AISpeaker {
       return nextMsg;
     }
     // 继续向上拉取其他新消息
-    return this._fetchNextRemainingMessages()
+    return this._fetchNextRemainingMessages();
   }
 
   private async _fetchNext2Messages() {
