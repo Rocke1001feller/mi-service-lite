@@ -1,5 +1,6 @@
 import { UserMessage } from "../mi/types";
 import { firstOf, lastOf, sleep } from "../utils/base";
+import { formatDuration, removePunctuationAndSpaces } from "../utils/string";
 import { BaseSpeaker, BaseSpeakerConfig } from "./base";
 
 export interface SpeakerCommand {
@@ -45,11 +46,39 @@ export class Speaker extends BaseSpeaker {
     while (this._status === "running") {
       const nextMsg = await this.fetchNextMessage();
       if (nextMsg) {
-        // 异步处理消息，不阻塞正常消息拉取
-        this.onMessage(nextMsg);
+        if (this.preResponse.startsWith(nextMsg.text)) {
+          // 有时会把上一次的 TTS 响应识别成用户指令
+          console.log("🚗 " + nextMsg.text);
+          setTimeout(async () => {
+            await this.MiNA!.pause();
+            if (this.keepAlive) {
+              await this.wakeUp();
+            }
+          });
+        } else {
+          console.log("🔥 " + nextMsg.text);
+          // 异步处理消息，不阻塞正常消息拉取
+          this.onMessage(nextMsg);
+        }
       }
       await sleep(this.heartbeat);
     }
+  }
+
+  preResponse = "";
+  async response(
+    text: string,
+    options?: {
+      speaker?: string;
+      keepAlive?: boolean;
+    }
+  ) {
+    this.preResponse = removePunctuationAndSpaces(text);
+    console.log("✅ " + text);
+    const start = Date.now();
+    const res = await super.response(text, options);
+    console.log("🕙 " + formatDuration(start, Date.now()));
+    return res;
   }
 
   _commands: SpeakerCommand[] = [];
