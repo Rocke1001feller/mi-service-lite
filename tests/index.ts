@@ -14,7 +14,7 @@ async function main() {
     userId: process.env.MI_USER!,
     password: process.env.MI_PASS!,
     did: process.env.MI_DID,
-    tts: "xiaoai",
+    tts: "doubao",
   };
 
   // const miServices = await getMiServices(config);
@@ -27,10 +27,29 @@ async function main() {
   const speaker = new AISpeaker(config);
   await speaker.initMiServices();
   // await testSpeakerResponse(speaker);
-  await testSpeakerGetMessages(speaker);
+  // await testSpeakerGetMessages(speaker);
+  // await testSwitchSpeaker(speaker);
+  // await testSwitchSpeaker(speaker);
+  await testAISpeaker(speaker);
 }
 
 main();
+
+async function testAISpeaker(speaker: AISpeaker) {
+  speaker.askAI = async (msg) => {
+    return "你说：" + msg.text;
+  };
+  await speaker.run();
+  console.log("finished");
+}
+
+async function testSwitchSpeaker(speaker: AISpeaker) {
+  await speaker.response("你好，我是豆包，很高兴认识你！");
+  const success = await speaker.switchDefaultSpeaker("魅力苏菲");
+  console.log("switchDefaultSpeaker 魅力苏菲", success);
+  await speaker.response("你好，我是豆包，很高兴认识你！");
+  console.log("hello");
+}
 
 async function testSpeakerGetMessages(speaker: AISpeaker) {
   let msgs = await speaker.getMessages({ filterTTS: true });
