@@ -2,6 +2,14 @@ import { UserMessage } from "../mi/types";
 import { firstOf, lastOf, pickOne, sleep } from "../utils/base";
 import { AISpeaker, AISpeakerConfig } from "./ai";
 
+interface Command {
+  match: (msg: UserMessage) => boolean;
+  /**
+   * 命中后执行的操作，返回值非空时会自动回复给用户
+   */
+  run: (msg: UserMessage) => Promise<string | undefined | void>;
+}
+
 export type XiaoAiSpeakerConfig = AISpeakerConfig & {
   /**
    * 拉取消息心跳间隔，默认1秒，单位毫秒
@@ -47,6 +55,10 @@ export type XiaoAiSpeakerConfig = AISpeakerConfig & {
    * 比如：豆包已退出
    */
   onExitAI?: string[];
+  /**
+   * 自定义的消息指令
+   */
+  commands?: Command[];
 };
 
 export class XiaoAiSpeaker extends AISpeaker {
@@ -73,6 +85,7 @@ export class XiaoAiSpeaker extends AISpeaker {
       `你好，我是${this.name}，很高兴为你服务！`,
     ];
     this.onExitAI = config.onExitAI ?? [`${this.name}已关闭！`];
+    this._commands = this._commands.concat(config.commands ?? []);
   }
 
   private _status: "running" | "stopped" = "stopped";
@@ -96,9 +109,49 @@ export class XiaoAiSpeaker extends AISpeaker {
     }
   }
 
+  private _commands: Command[] = [
+    {
+      match: (msg) => this.wakeUpKeyWords.some((e) => msg.text.includes(e)),
+      run: async (msg) => {
+        await this.enterKeepAlive();
+      },
+    },
+    {
+      match: (msg) => this.exitKeywords.some((e) => msg.text.includes(e)),
+      run: async (msg) => {
+        await this.exitKeepAlive();
+      },
+    },
+  ];
+
+  async onMessage(msg: UserMessage) {
+    const commands: Command[] = [
+      ...this._commands,
+      {
+        match: (_msg) =>
+          this.keepAlive ||
+          this.callAIKeyWords.some((e) => _msg.text.includes(e)),
+        run: (_msg) => this.askAIForAnswer(msg),
+      },
+    ];
+    for (const command of commands) {
+      if (command.match(msg)) {
+        // 关闭小爱的回复
+        await this.MiNA!.stop();
+        // 执行命令
+        const answer = await command.run(msg);
+        // 回复用户
+        if (answer) {
+          await this.response(answer, {
+            keepAlive: this.keepAlive,
+          });
+        }
+        break;
+      }
+    }
+  }
+
   async enterKeepAlive(): Promise<void> {
-    // 关闭小爱的回复
-    await this.MiNA!.stop();
     // 唤醒
     await this.wakeUp();
     this.keepAlive = true;
@@ -109,8 +162,6 @@ export class XiaoAiSpeaker extends AISpeaker {
   }
 
   async exitKeepAlive(): Promise<void> {
-    // 关闭小爱的回复
-    await this.MiNA!.stop();
     // 退出唤醒状态
     this.keepAlive = false;
     // 回应
@@ -129,21 +180,6 @@ export class XiaoAiSpeaker extends AISpeaker {
       }
     }, 60 * 1000);
     return res;
-  }
-
-  async onMessage(msg: UserMessage) {
-    if (this.wakeUpKeyWords.some((e) => msg.text.includes(e))) {
-      return this.enterKeepAlive();
-    }
-    if (this.exitKeywords.some((e) => msg.text.includes(e))) {
-      return this.exitKeepAlive();
-    }
-    if (
-      this.keepAlive ||
-      this.callAIKeyWords.some((e) => msg.text.includes(e))
-    ) {
-      await this.askAI2Answer(msg);
-    }
   }
 
   private _tempMsgs: UserMessage[] = [];

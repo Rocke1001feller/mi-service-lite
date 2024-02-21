@@ -25,7 +25,7 @@ export type AISpeakerConfig = BaseSpeakerConfig & {
 
 export class AISpeaker extends BaseSpeaker {
   currentMsg?: UserMessage;
-  private _askAI2AnswerSteps: AnswerStep[] = [];
+  private _askAIForAnswerSteps: AnswerStep[] = [];
 
   /**
    * 是否保持设备响应状态
@@ -41,47 +41,29 @@ export class AISpeaker extends BaseSpeaker {
     this.askAI = config.askAI;
     this.onAIError = config.onAIError ?? ["啊哦，出错了，稍后再试吧！"];
     this.onAIAsking = config.onAIAsking ?? ["让我想想", "请稍等"];
-    this._askAI2AnswerSteps.push(async (msg, data) => {
-      // 关闭小爱的回复
-      await this.MiNA!.stop();
-    });
-    this._askAI2AnswerSteps.push(async (msg, data) => {
+    this._askAIForAnswerSteps.push(async (msg, data) => {
       // 思考中
       await this.response(pickOne(this.onAIAsking)!, {
         keepAlive: this.keepAlive,
       });
     });
-    this._askAI2AnswerSteps.push(async (msg, data) => {
+    this._askAIForAnswerSteps.push(async (msg, data) => {
       // 调用 LLM 获取回复
-      const answer = await this.askAI(msg);
+      let answer = await this.askAI(msg);
+      answer = answer ?? pickOne(this.onAIError);
       return { data: { answer } };
-    });
-    this._askAI2AnswerSteps.push(async (msg, data) => {
-      if (!data.answer) {
-        // 回复失败
-        await this.response(pickOne(this.onAIError)!, {
-          keepAlive: this.keepAlive,
-        });
-        return { stop: true };
-      }
-    });
-    this._askAI2AnswerSteps.push(async (msg, data) => {
-      // 回复用户
-      await this.response(data.answer, {
-        keepAlive: this.keepAlive,
-      });
     });
   }
 
-  async askAI2Answer(msg: UserMessage) {
-    let data = {};
+  async askAIForAnswer(msg: UserMessage) {
+    let data: any = {};
     const oldMsg = this.currentMsg?.timestamp;
-    for (const action of this._askAI2AnswerSteps) {
-      if (this.currentMsg?.timestamp !== oldMsg) {
-        // 收到新的用户请求消息，终止旧消息的响应继续向下运行
-        break;
-      }
+    for (const action of this._askAIForAnswerSteps) {
       const res = await action(msg, data);
+      if (this.currentMsg?.timestamp !== oldMsg) {
+        // 收到新的用户请求消息，终止后续操作和响应
+        return;
+      }
       if (res?.data) {
         data = { ...data, ...res.data };
       }
@@ -89,6 +71,6 @@ export class AISpeaker extends BaseSpeaker {
         break;
       }
     }
-    return data;
+    return data.answer;
   }
 }
