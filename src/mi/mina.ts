@@ -116,7 +116,7 @@ export class MiNA {
   }
 
   async setVolume(volume: number) {
-    volume = Math.round(clamp(volume, 0, 100));
+    volume = Math.round(clamp(volume, 6, 100));
     const res = await this._callUbus("mediaplayer", "player_set_volume", {
       volume: volume,
     });
