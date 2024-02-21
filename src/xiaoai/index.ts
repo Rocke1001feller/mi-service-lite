@@ -106,13 +106,6 @@ export class XiaoAiSpeaker extends AISpeaker {
     await this.response(pickOne(this.onEnterAI)!, {
       keepAlive: true,
     });
-    const lastMsg = this._lastMsg?.timestamp;
-    setTimeout(async () => {
-      if (this.keepAlive && lastMsg === this._lastMsg?.timestamp) {
-        // 1 分钟内没有收到新的用户消息，自动退出唤醒状态
-        await this.exitKeepAlive();
-      }
-    }, 60 * 1000);
   }
 
   async exitKeepAlive(): Promise<void> {
@@ -124,6 +117,18 @@ export class XiaoAiSpeaker extends AISpeaker {
     await this.response(pickOne(this.onExitAI)!, {
       keepAlive: false,
     });
+  }
+
+  async wakeUp() {
+    const res = await super.wakeUp();
+    // 1 分钟内没有收到新的用户消息，自动退出唤醒状态
+    const lastMsg = this._lastMsg?.timestamp;
+    setTimeout(async () => {
+      if (this.keepAlive && lastMsg === this._lastMsg?.timestamp) {
+        await this.exitKeepAlive();
+      }
+    }, 60 * 1000);
+    return res;
   }
 
   async onMessage(msg: UserMessage) {
