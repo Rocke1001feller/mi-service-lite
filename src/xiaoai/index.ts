@@ -122,9 +122,9 @@ export class XiaoAiSpeaker extends AISpeaker {
   async wakeUp() {
     const res = await super.wakeUp();
     // 1 分钟内没有收到新的用户消息，自动退出唤醒状态
-    const lastMsg = this._lastMsg?.timestamp;
+    const lastMsg = this.currentMsg?.timestamp;
     setTimeout(async () => {
-      if (this.keepAlive && lastMsg === this._lastMsg?.timestamp) {
+      if (this.keepAlive && lastMsg === this.currentMsg?.timestamp) {
         await this.exitKeepAlive();
       }
     }, 60 * 1000);
@@ -146,10 +146,9 @@ export class XiaoAiSpeaker extends AISpeaker {
     }
   }
 
-  _lastMsg?: UserMessage;
-  _tempMsgs: UserMessage[] = [];
+  private _tempMsgs: UserMessage[] = [];
   async fetchNextMessage(): Promise<UserMessage | undefined> {
-    if (!this._lastMsg) {
+    if (!this.currentMsg) {
       await this._fetchFirstMessage();
       // 第一条消息仅用作初始化消息游标，不响应
       return;
@@ -160,20 +159,12 @@ export class XiaoAiSpeaker extends AISpeaker {
   private async _fetchFirstMessage() {
     const msgs = await this.getConversations({
       limit: 1,
-      filterUnanswered: false,
+      filterTTS: false,
     });
-    this._lastMsg = msgs[0];
+    this.currentMsg = msgs[0];
   }
 
-  private _fetchNextTempMessage() {
-    const nextMsg = this._tempMsgs.pop();
-    this._lastMsg = nextMsg;
-    return nextMsg;
-  }
-
-  private async _fetchNextMessage(
-    maxPage = 3
-  ): Promise<UserMessage | undefined> {
+  private async _fetchNextMessage(): Promise<UserMessage | undefined> {
     if (this._tempMsgs.length > 0) {
       // 当前有暂存的新消息（从新到旧），依次处理之
       return this._fetchNextTempMessage();
@@ -191,27 +182,34 @@ export class XiaoAiSpeaker extends AISpeaker {
     // 拉取最新的 2 条 msg（用于和上一条消息比对是否连续）
     let msgs = await this.getConversations({ limit: 2 });
     if (
-      msgs.length < 2 ||
-      firstOf(msgs)!.timestamp <= this._lastMsg!.timestamp
+      msgs.length < 1 ||
+      firstOf(msgs)!.timestamp <= this.currentMsg!.timestamp
     ) {
       // 没有拉到新消息
       return;
     }
     if (
-      firstOf(msgs)!.timestamp > this._lastMsg!.timestamp &&
-      lastOf(msgs)!.timestamp <= this._lastMsg!.timestamp
+      firstOf(msgs)!.timestamp > this.currentMsg!.timestamp &&
+      (msgs.length === 1 ||
+        lastOf(msgs)!.timestamp <= this.currentMsg!.timestamp)
     ) {
       // 刚好收到一条新消息
-      this._lastMsg = firstOf(msgs);
-      return this._lastMsg;
+      this.currentMsg = firstOf(msgs);
+      return this.currentMsg;
     }
     // 还有其他新消息，暂存当前的新消息
     for (const msg of msgs) {
-      if (msg.timestamp > this._lastMsg!.timestamp) {
+      if (msg.timestamp > this.currentMsg!.timestamp) {
         this._tempMsgs.push(msg);
       }
     }
     return "continue";
+  }
+
+  private _fetchNextTempMessage() {
+    const nextMsg = this._tempMsgs.pop();
+    this.currentMsg = nextMsg;
+    return nextMsg;
   }
 
   private async _fetchNextRemainingMessages(maxPage = 3) {
@@ -223,16 +221,16 @@ export class XiaoAiSpeaker extends AISpeaker {
         // 拉取新消息超长，取消拉取
         return this._fetchNextTempMessage();
       }
-      const nextTimestamp = lastOf(this._tempMsgs)?.timestamp;
+      const nextTimestamp = lastOf(this._tempMsgs)!.timestamp;
       const msgs = await this.getConversations({
         limit: 10,
         timestamp: nextTimestamp,
       });
       for (const msg of msgs) {
-        if (msg.timestamp === nextTimestamp) {
-          // 忽略上一页的游标消息
+        if (msg.timestamp >= nextTimestamp) {
+          // 忽略上一页的消息
           continue;
-        } else if (msg.timestamp > this._lastMsg!.timestamp) {
+        } else if (msg.timestamp > this.currentMsg!.timestamp) {
           // 继续添加新消息
           this._tempMsgs.push(msg);
         } else {
@@ -246,14 +244,16 @@ export class XiaoAiSpeaker extends AISpeaker {
   async getConversations(options?: {
     limit?: number;
     timestamp?: number;
-    filterUnanswered?: boolean;
+    filterTTS?: boolean;
   }): Promise<UserMessage[]> {
-    const filterUnanswered = options?.filterUnanswered ?? true;
+    const filterTTS = options?.filterTTS ?? true;
     const conversation = await this.MiNA!.getConversations(options);
     let records = conversation?.records ?? [];
-    if (filterUnanswered) {
-      // 过滤未应答的用户消息
-      records = records.filter((e) => e.answers.length > 0);
+    if (filterTTS) {
+      // 过滤有小爱回答的消息
+      records = records.filter(
+        (e) => e.answers.length > 0 && e.answers.some((e) => e.type === "TTS")
+      );
     }
     return records.map((e) => {
       const ttsAnswer = e.answers.find((e) => e.type === "TTS") as any;

@@ -24,7 +24,7 @@ export type AISpeakerConfig = BaseSpeakerConfig & {
 };
 
 export class AISpeaker extends BaseSpeaker {
-  private _currentMsgId = 0;
+  currentMsg?: UserMessage;
   private _askAI2AnswerSteps: AnswerStep[] = [];
 
   /**
@@ -74,12 +74,11 @@ export class AISpeaker extends BaseSpeaker {
   }
 
   async askAI2Answer(msg: UserMessage) {
-    this._currentMsgId++;
-    const msgId = this._currentMsgId;
     let data = {};
+    const oldMsg = this.currentMsg?.timestamp;
     for (const action of this._askAI2AnswerSteps) {
-      if (this._currentMsgId !== msgId) {
-        // 收到新消息，终止旧消息的响应继续向下运行
+      if (this.currentMsg?.timestamp !== oldMsg) {
+        // 收到新的用户请求消息，终止旧消息的响应继续向下运行
         break;
       }
       const res = await action(msg, data);
