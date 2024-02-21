@@ -5,15 +5,16 @@ import dotenv from "dotenv";
 import { MiNA } from "../src/mi/mina";
 import { MiIOT } from "../src/mi/miot";
 import { sleep } from "../src/utils/base";
-import { BaseSpeaker } from "../src/xiaoai/base";
+import { AISpeaker } from "../src/xiaoai/ai";
 
 dotenv.config();
 
 async function main() {
-  const config = {
+  const config: any = {
     userId: process.env.MI_USER!,
     password: process.env.MI_PASS!,
     did: process.env.MI_DID,
+    tts: "xiaoai",
   };
 
   // const miServices = await getMiServices(config);
@@ -23,16 +24,28 @@ async function main() {
   // await testVolume(miServices);
   // await testPlayAudio(miServices);
 
-  const speaker = new BaseSpeaker(config);
-  await testXiaoAiSpeaker(speaker);
+  const speaker = new AISpeaker(config);
+  await speaker.initMiServices();
+  // await testSpeakerResponse(speaker);
+  await testSpeakerGetMessages(speaker);
 }
 
 main();
 
-async function testXiaoAiSpeaker(speaker: BaseSpeaker) {
-  await speaker.initMiServices();
-  await speaker.response("你好，我是豆包，很高兴认识你！");
-  console.log("finished");
+async function testSpeakerGetMessages(speaker: AISpeaker) {
+  let msgs = await speaker.getMessages({ filterTTS: true });
+  console.log("filterTTS msgs", msgs);
+  msgs = await speaker.getMessages({ filterTTS: false });
+  console.log("no filterTTS msgs", msgs);
+}
+
+async function testSpeakerResponse(speaker: AISpeaker) {
+  let status = await speaker.MiNA!.getStatus();
+  console.log("curent status", status);
+  speaker.response("你好，我是豆包，很高兴认识你！");
+  sleep(1000);
+  status = await speaker.MiNA!.getStatus();
+  console.log("tts status", status);
 }
 
 interface MiServices {

@@ -90,7 +90,13 @@ export class MiNA {
     return this._callMina("GET", "/admin/v2/device_list");
   }
 
-  async getStatus() {
+  async getStatus(): Promise<
+    | {
+        volume: number;
+        status: "idle" | "playing" | "paused" | "stopped" | "unknown";
+      }
+    | undefined
+  > {
     const data = await this._callUbus("mediaplayer", "player_get_play_status");
     const res = jsonDecode(data?.info);
     if (!data || data.code !== 0 || !res) {
@@ -99,7 +105,7 @@ export class MiNA {
     const map = { 0: "idle", 1: "playing", 2: "paused", 3: "stopped" } as any;
     return {
       ...res,
-      status: map[res.status],
+      status: map[res.status] ?? "unknown",
       volume: res.volume,
     };
   }
@@ -117,14 +123,9 @@ export class MiNA {
     return res?.code === 0;
   }
 
-  async play(options?: {
-    tts?: string;
-    url?: string;
-    file?: string;
-    local?: string;
-  }) {
+  async play(options?: { tts?: string; url?: string }) {
     let res;
-    const { tts, url, file, local } = options ?? {};
+    const { tts, url } = options ?? {};
     if (tts) {
       res = await this._callUbus("mibrain", "text_to_speech", {
         text: tts,
@@ -168,7 +169,7 @@ export class MiNA {
    * 注意：
    * 只拉取用户主动请求，设备被动响应的消息，
    * 不包含设备主动回应用户的消息。
-   * 
+   *
    * - 从游标处由新到旧拉取
    * - 结果包含游标消息本身
    * - 消息列表从新到旧排序

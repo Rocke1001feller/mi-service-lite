@@ -1,8 +1,8 @@
 import { UserMessage } from "../mi/types";
-import { firstOf, lastOf, pickOne, sleep } from "../utils/base";
-import { AISpeaker, AISpeakerConfig } from "./ai";
+import { firstOf, lastOf, sleep } from "../utils/base";
+import { BaseSpeaker, BaseSpeakerConfig } from "./base";
 
-interface Command {
+export interface SpeakerCommand {
   match: (msg: UserMessage) => boolean;
   /**
    * 命中后执行的操作，返回值非空时会自动回复给用户
@@ -10,82 +10,25 @@ interface Command {
   run: (msg: UserMessage) => Promise<string | undefined | void>;
 }
 
-export type XiaoAiSpeakerConfig = AISpeakerConfig & {
+export type SpeakerConfig = BaseSpeakerConfig & {
   /**
    * 拉取消息心跳间隔，默认1秒，单位毫秒
    */
   heartbeat?: number;
   /**
-   * 设备名称，用来唤醒/退出对话模式等
-   *
-   * 建议使用常见词语，避免使用多音字和容易混淆读音的词语
-   */
-  name?: string;
-  /**
-   * 召唤关键词
-   *
-   * 当消息中包含召唤关键词时，会调用 AI 来响应用户消息
-   *
-   * 比如：打开/进入/召唤豆包
-   */
-  callAIKeyWords?: string[];
-  /**
-   * 唤醒关键词
-   *
-   * 当消息中包含唤醒关键词时，会进入 AI 唤醒状态
-   *
-   * 比如：关闭/退出/再见豆包
-   */
-  wakeUpKeyWords?: string[];
-  /**
-   * 退出关键词
-   *
-   * 当消息中包含退出关键词时，会退出 AI 唤醒状态
-   */
-  exitKeywords?: string[];
-  /**
-   * 进入 AI 模式的欢迎语
-   *
-   * 比如：你好，我是豆包，请问有什么能够帮你的吗？
-   */
-  onEnterAI?: string[];
-  /**
-   * 退出 AI 模式的提示语
-   *
-   * 比如：豆包已退出
-   */
-  onExitAI?: string[];
-  /**
    * 自定义的消息指令
    */
-  commands?: Command[];
+  commands?: SpeakerCommand[];
 };
 
-export class XiaoAiSpeaker extends AISpeaker {
+export class Speaker extends BaseSpeaker {
   heartbeat = 1000;
+  currentMsg?: UserMessage;
 
-  name: string;
-  callAIKeyWords: string[];
-  wakeUpKeyWords: string[];
-  exitKeywords: string[];
-  onEnterAI: string[];
-  onExitAI: string[];
-
-  constructor(config: XiaoAiSpeakerConfig) {
+  constructor(config: SpeakerConfig) {
     super(config);
     this.heartbeat = config.heartbeat ?? 1000;
-    this.name = config.name ?? "豆包";
-    this.callAIKeyWords = config.callAIKeyWords ?? [this.name];
-    this.wakeUpKeyWords =
-      config.wakeUpKeyWords ??
-      ["打开", "进入", "召唤"].map((e) => e + this.name);
-    this.exitKeywords =
-      config.exitKeywords ?? ["关闭", "退出", "再见"].map((e) => e + this.name);
-    this.onEnterAI = config.onEnterAI ?? [
-      `你好，我是${this.name}，很高兴为你服务！`,
-    ];
-    this.onExitAI = config.onExitAI ?? [`${this.name}已关闭！`];
-    this._commands = this._commands.concat(config.commands ?? []);
+    this._commands = config.commands ?? [];
   }
 
   private _status: "running" | "stopped" = "stopped";
@@ -109,35 +52,20 @@ export class XiaoAiSpeaker extends AISpeaker {
     }
   }
 
-  private _commands: Command[] = [
-    {
-      match: (msg) => this.wakeUpKeyWords.some((e) => msg.text.includes(e)),
-      run: async (msg) => {
-        await this.enterKeepAlive();
-      },
-    },
-    {
-      match: (msg) => this.exitKeywords.some((e) => msg.text.includes(e)),
-      run: async (msg) => {
-        await this.exitKeepAlive();
-      },
-    },
-  ];
+  _commands: SpeakerCommand[] = [];
+  get commands() {
+    return this._commands;
+  }
+
+  addCommand(command: SpeakerCommand) {
+    this.commands.push(command);
+  }
 
   async onMessage(msg: UserMessage) {
-    const commands: Command[] = [
-      ...this._commands,
-      {
-        match: (_msg) =>
-          this.keepAlive ||
-          this.callAIKeyWords.some((e) => _msg.text.includes(e)),
-        run: (_msg) => this.askAIForAnswer(msg),
-      },
-    ];
-    for (const command of commands) {
+    for (const command of this.commands) {
       if (command.match(msg)) {
         // 关闭小爱的回复
-        await this.MiNA!.stop();
+        await this.MiNA!.pause();
         // 执行命令
         const answer = await command.run(msg);
         // 回复用户
@@ -151,23 +79,19 @@ export class XiaoAiSpeaker extends AISpeaker {
     }
   }
 
-  async enterKeepAlive(): Promise<void> {
+  /**
+   * 是否保持设备响应状态
+   */
+  keepAlive = false;
+
+  async enterKeepAlive() {
     // 唤醒
-    await this.wakeUp();
     this.keepAlive = true;
-    // 回应
-    await this.response(pickOne(this.onEnterAI)!, {
-      keepAlive: true,
-    });
   }
 
-  async exitKeepAlive(): Promise<void> {
+  async exitKeepAlive() {
     // 退出唤醒状态
     this.keepAlive = false;
-    // 回应
-    await this.response(pickOne(this.onExitAI)!, {
-      keepAlive: false,
-    });
   }
 
   async wakeUp() {
@@ -193,7 +117,7 @@ export class XiaoAiSpeaker extends AISpeaker {
   }
 
   private async _fetchFirstMessage() {
-    const msgs = await this.getConversations({
+    const msgs = await this.getMessages({
       limit: 1,
       filterTTS: false,
     });
@@ -216,7 +140,7 @@ export class XiaoAiSpeaker extends AISpeaker {
 
   private async _fetchNext2Messages() {
     // 拉取最新的 2 条 msg（用于和上一条消息比对是否连续）
-    let msgs = await this.getConversations({ limit: 2 });
+    let msgs = await this.getMessages({ limit: 2 });
     if (
       msgs.length < 1 ||
       firstOf(msgs)!.timestamp <= this.currentMsg!.timestamp
@@ -258,7 +182,7 @@ export class XiaoAiSpeaker extends AISpeaker {
         return this._fetchNextTempMessage();
       }
       const nextTimestamp = lastOf(this._tempMsgs)!.timestamp;
-      const msgs = await this.getConversations({
+      const msgs = await this.getMessages({
         limit: 10,
         timestamp: nextTimestamp,
       });
@@ -277,7 +201,7 @@ export class XiaoAiSpeaker extends AISpeaker {
     }
   }
 
-  async getConversations(options?: {
+  async getMessages(options?: {
     limit?: number;
     timestamp?: number;
     filterTTS?: boolean;
