@@ -40,6 +40,23 @@ export class BaseSpeaker {
     return this.MiIOT!.doAction(5, 3);
   }
 
+  preVolume?: number;
+  async mute() {
+    await this.MiNA!.pause();
+    const volume = await this.MiNA!.getVolume();
+    if ((volume ?? 0) > 6) {
+      this.preVolume = volume;
+    }
+    return this.MiNA!.setVolume(6);
+  }
+
+  async unMute() {
+    const volume = await this.MiNA!.getVolume();
+    if (volume === 6 && this.preVolume) {
+      return this.MiNA!.setVolume(this.preVolume);
+    }
+  }
+
   async response(
     text: string,
     options?: {
