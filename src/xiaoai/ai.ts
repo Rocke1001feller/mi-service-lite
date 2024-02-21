@@ -91,21 +91,23 @@ export class AISpeaker extends Speaker {
     this.askAI = config.askAI;
     this.onAIError = config.onAIError ?? ["啊哦，出错了，稍后再试吧！"];
     this.onAIAsking = config.onAIAsking ?? ["让我想想", "请稍等"];
-    this._askAIForAnswerSteps.push(async (msg, data) => {
+  }
+
+  private _askAIForAnswerSteps: AnswerStep[] = [
+    async (msg, data) => {
       // 思考中
       await this.response(pickOne(this.onAIAsking)!, {
         keepAlive: this.keepAlive,
       });
-    });
-    this._askAIForAnswerSteps.push(async (msg, data) => {
+    },
+    async (msg, data) => {
       // 调用 LLM 获取回复
       let answer = await this.askAI?.(msg);
       answer = answer ?? pickOne(this.onAIError);
       return { data: { answer } };
-    });
-  }
+    },
+  ];
 
-  private _askAIForAnswerSteps: AnswerStep[] = [];
   async askAIForAnswer(msg: UserMessage) {
     let data: any = {};
     const oldMsg = this.currentMsg?.timestamp;
