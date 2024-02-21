@@ -31,7 +31,7 @@ export class Speaker extends BaseSpeaker {
     this._commands = config.commands ?? [];
   }
 
-  private _status: "running" | "stopped" = "stopped";
+  private _status: "running" | "stopped" = "running";
 
   stop() {
     this._status = "stopped";
