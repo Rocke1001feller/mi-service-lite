@@ -29,7 +29,7 @@ async function main() {
   // await testSpeakerResponse(speaker);
   // await testSpeakerGetMessages(speaker);
   // await testSwitchSpeaker(speaker);
-  // await testSwitchSpeaker(speaker);
+  // await testSpeakerUnWakeUp(speaker);
   await testAISpeaker(speaker);
 }
 
@@ -41,6 +41,13 @@ async function testAISpeaker(speaker: AISpeaker) {
   };
   await speaker.run();
   console.log("finished");
+}
+
+async function testSpeakerUnWakeUp(speaker: AISpeaker) {
+  await speaker.wakeUp();
+  await sleep(1000);
+  await speaker.unWakeUp();
+  console.log("hello");
 }
 
 async function testSwitchSpeaker(speaker: AISpeaker) {

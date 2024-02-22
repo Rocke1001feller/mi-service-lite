@@ -93,7 +93,7 @@ export class MiIOT {
    * - datasource=2  直接下发rpc，每次都是设备返回的最新值
    * - datasource=3  直接读缓存；没有缓存的 code 是 -70xxxx；可能取不到值
    */
-  private _callMiotSpec(command: string, params: any, datasource = 1) {
+  private _callMiotSpec(command: string, params: any, datasource = 2) {
     return this._callMiIOT("POST", "/miotspec/" + command, {
       params,
       datasource,

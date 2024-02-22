@@ -111,6 +111,64 @@ export class AISpeaker extends Speaker {
     ];
   }
 
+  async enterKeepAlive() {
+    // 回应
+    await this.response({ text: pickOne(this.onEnterAI)!, keepAlive: true });
+    // 唤醒
+    await super.enterKeepAlive();
+  }
+
+  async exitKeepAlive() {
+    // 退出唤醒状态
+    await super.exitKeepAlive();
+    // 回应
+    await this.response({
+      text: pickOne(this.onExitAI)!,
+      keepAlive: false,
+      playSFX: false,
+    });
+    await this.unWakeUp();
+  }
+
+  get commands() {
+    return [
+      {
+        match: (msg) => this.wakeUpKeyWords.some((e) => msg.text.includes(e)),
+        run: async (msg) => {
+          await this.enterKeepAlive();
+        },
+      },
+      {
+        match: (msg) => this.exitKeywords.some((e) => msg.text.includes(e)),
+        run: async (msg) => {
+          await this.exitKeepAlive();
+        },
+      },
+      {
+        match: (msg) => msg.text.startsWith(this.switchSpeakerPrefix),
+        run: async (msg) => {
+          await this.response({
+            text: "正在切换音色，请稍等...",
+            keepAlive: this.keepAlive,
+          });
+          const speaker = msg.text.replace(this.switchSpeakerPrefix, "");
+          const success = await this.switchDefaultSpeaker(speaker);
+          await this.response({
+            text: success ? "音色已切换！" : "音色切换失败！",
+            keepAlive: this.keepAlive,
+          });
+        },
+      },
+      ...this._commands,
+      {
+        match: (msg) =>
+          this.keepAlive ||
+          this.callAIPrefix.some((e) => msg.text.startsWith(e)),
+        run: (msg) => this.askAIForAnswer(msg),
+      },
+    ] as SpeakerCommand[];
+  }
+
   private _askAIForAnswerSteps: AnswerStep[] = [
     async (msg, data) => {
       // 思考中
@@ -153,58 +211,5 @@ export class AISpeaker extends Speaker {
       }
     }
     return data.answer;
-  }
-
-  get commands() {
-    return [
-      {
-        match: (msg) => this.wakeUpKeyWords.some((e) => msg.text.includes(e)),
-        run: async (msg) => {
-          await this.enterKeepAlive();
-        },
-      },
-      {
-        match: (msg) => this.exitKeywords.some((e) => msg.text.includes(e)),
-        run: async (msg) => {
-          await this.exitKeepAlive();
-        },
-      },
-      {
-        match: (msg) => msg.text.startsWith(this.switchSpeakerPrefix),
-        run: async (msg) => {
-          await this.response({
-            text: "正在切换音色，请稍等...",
-            keepAlive: this.keepAlive,
-          });
-          const speaker = msg.text.replace(this.switchSpeakerPrefix, "");
-          const success = await this.switchDefaultSpeaker(speaker);
-          await this.response({
-            text: success ? "音色已切换！" : "音色切换失败！",
-            keepAlive: this.keepAlive,
-          });
-        },
-      },
-      ...this._commands,
-      {
-        match: (msg) =>
-          this.keepAlive ||
-          this.callAIPrefix.some((e) => msg.text.startsWith(e)),
-        run: (msg) => this.askAIForAnswer(msg),
-      },
-    ] as SpeakerCommand[];
-  }
-
-  async enterKeepAlive() {
-    // 回应
-    await this.response({ text: pickOne(this.onEnterAI)!, keepAlive: true });
-    // 唤醒
-    await super.enterKeepAlive();
-  }
-
-  async exitKeepAlive() {
-    // 退出唤醒状态
-    await super.exitKeepAlive();
-    // 回应
-    await this.response({ text: pickOne(this.onExitAI)!, keepAlive: false });
   }
 }

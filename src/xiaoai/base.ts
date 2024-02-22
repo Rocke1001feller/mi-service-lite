@@ -44,6 +44,11 @@ export class BaseSpeaker {
     return this.MiIOT!.doAction(5, 3);
   }
 
+  async unWakeUp() {
+    await this.MiIOT!.setProperty(4, 1, true); // 关闭麦克风
+    await this.MiIOT!.setProperty(4, 1, false); // 打开麦克风
+  }
+
   preVolume?: number;
   async mute() {
     await this.MiNA!.pause();
@@ -89,6 +94,8 @@ export class BaseSpeaker {
             // 播放开始提示音
             await this.MiNA!.play({ url: process.env.AUDIO_BEEP });
           }
+          // 在播放 TTS 语音之前，先取消小爱音箱的唤醒状态，防止将 TTS 语音识别成用户指令
+          await this.unWakeUp();
           text = encodeURIComponent(text);
           const doubaoTTS = process.env.TTS_DOUBAO;
           const url = `${doubaoTTS}?speaker=${speaker}&text=${text}`;

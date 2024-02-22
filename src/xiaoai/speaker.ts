@@ -101,14 +101,13 @@ export class Speaker extends BaseSpeaker {
     speaker?: string;
     keepAlive?: boolean;
     playSFX?: boolean;
-    isNotResponding?: () => boolean;
   }) {
     const { text, audio } = options;
     if (text) {
       this.preResponse = removePunctuationAndSpaces(text);
     }
     const currentMsg = this.currentMsg?.timestamp;
-    options.isNotResponding = () => {
+    (options as any).isNotResponding = () => {
       // 有新的消息进入，旧的响应被打断
       return !this.responding || currentMsg !== this.currentMsg?.timestamp;
     };
@@ -119,7 +118,7 @@ export class Speaker extends BaseSpeaker {
     this.responding = false;
     console.log("🕙 " + formatDuration(start, Date.now()));
     return res;
-  }
+  } 
 
   _commands: SpeakerCommand[] = [];
   get commands() {
