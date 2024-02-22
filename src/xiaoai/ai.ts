@@ -5,6 +5,10 @@ import { Speaker, SpeakerCommand, SpeakerConfig } from "./speaker";
 export type AISpeakerConfig = SpeakerConfig & {
   askAI?: (msg: UserMessage) => Promise<string>;
   /**
+   * 没有新的请求多少秒之后，自动退出唤醒模式（默认10秒）
+   */
+  exitKeepAliveAfter?: number;
+  /**
    * AI 开始回答时的提示语
    *
    * 比如：请稍等，让我想想
@@ -65,6 +69,7 @@ type AnswerStep = (
 
 export class AISpeaker extends Speaker {
   askAI: AISpeakerConfig["askAI"];
+  exitKeepAliveAfter = 10;
   onAIError: string[];
   onAIAsking: string[];
   name: string;
@@ -76,6 +81,7 @@ export class AISpeaker extends Speaker {
 
   constructor(config: AISpeakerConfig) {
     super(config);
+    this.exitKeepAliveAfter = config.exitKeepAliveAfter ?? 10;
     this.heartbeat = config.heartbeat ?? 1000;
     this.name = config.name ?? "豆包";
     this.callAIKeyWords = config.callAIKeyWords ?? [this.name];
@@ -167,5 +173,17 @@ export class AISpeaker extends Speaker {
     await this.response(pickOne(this.onExitAI)!, {
       keepAlive: false,
     });
+  }
+
+  async wakeUp() {
+    const res = await super.wakeUp();
+    // 1 分钟内没有收到新的用户消息，自动退出唤醒状态
+    const lastMsg = this.currentMsg?.timestamp;
+    setTimeout(async () => {
+      if (this.keepAlive && lastMsg === this.currentMsg?.timestamp) {
+        await this.exitKeepAlive();
+      }
+    }, this.exitKeepAliveAfter * 1000);
+    return res;
   }
 }
