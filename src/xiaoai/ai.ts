@@ -7,7 +7,7 @@ export type AISpeakerConfig = SpeakerConfig & {
   /**
    * 切换音色前缀
    *
-   * 比如：音色切换到（文静猫猫）
+   * 比如：音色切换到（文静毛毛）
    */
   switchSpeakerPrefix?: string;
   /**
@@ -73,20 +73,26 @@ export class AISpeaker extends Speaker {
   askAI: AISpeakerConfig["askAI"];
   switchSpeakerPrefix = "音色切换到";
   name = "豆包";
+  onEnterAI: string[];
+  onExitAI: string[];
   callAIPrefix: string[];
   wakeUpKeyWords = ["打开", "进入", "召唤"];
   exitKeywords = ["关闭", "退出", "再见"];
-  onEnterAI: string[];
-  onExitAI: string[];
-  onAIError: string[];
-  onAIAsking: string[];
+  onAIAsking = ["让我先想想", "请稍等"];
+  onAIError = ["啊哦，出错了，请稍后再试吧！"];
 
   constructor(config: AISpeakerConfig) {
     super(config);
     this.askAI = config.askAI;
     this.switchSpeakerPrefix =
       config.switchSpeakerPrefix ?? this.switchSpeakerPrefix;
+    this.onAIError = config.onAIError ?? this.onAIError;
+    this.onAIAsking = config.onAIAsking ?? this.onAIAsking;
     this.name = config.name ?? this.name;
+    this.onEnterAI = config.onEnterAI ?? [
+      `你好，我是${this.name}，很高兴为你服务！`,
+    ];
+    this.onExitAI = config.onExitAI ?? [`${this.name}已关闭！`];
     this.callAIPrefix = config.callAIPrefix ?? [
       "请",
       "你",
@@ -99,39 +105,30 @@ export class AISpeaker extends Speaker {
     this.exitKeywords = (config.exitKeywords ?? this.exitKeywords).map(
       (e) => e + this.name
     );
-    this.onEnterAI = config.onEnterAI ?? [
-      `你好，我是${this.name}，很高兴为你服务！`,
-    ];
-    this.onExitAI = config.onExitAI ?? [`${this.name}已关闭！`];
-    this.onAIError = config.onAIError ?? ["啊哦，出错了，请稍后再试吧！"];
-    this.onAIAsking = config.onAIAsking ?? ["让我先想想", "请稍等"];
   }
 
   private _askAIForAnswerSteps: AnswerStep[] = [
     async (msg, data) => {
-      // todo 等待音效
-
-      //or
-
       // 思考中
       await this.response({
+        audio: process.env.AUDIO_LOADING,
         text: pickOne(this.onAIAsking)!,
         keepAlive: this.keepAlive,
       });
     },
     async (msg, data) => {
-      // 调用 LLM 获取回复
+      // 调用 AI 获取回复
       let answer = await this.askAI?.(msg);
       return { data: { answer } };
     },
     async (msg, data) => {
       if (!data.answer) {
-        // todo 回答异常音效
-
-        // or
-
-        const answer = pickOne(this.onAIError);
-        return { data: { answer } };
+        // 回答异常
+        await this.response({
+          audio: process.env.AUDIO_ERROR,
+          text: pickOne(this.onAIError)!,
+          keepAlive: this.keepAlive,
+        });
       }
     },
   ];
