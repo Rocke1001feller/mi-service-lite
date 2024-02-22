@@ -20,16 +20,24 @@ export type SpeakerConfig = BaseSpeakerConfig & {
    * 自定义的消息指令
    */
   commands?: SpeakerCommand[];
+  /**
+   * 没有新的用户请求之后，多久自动退出唤醒模式（单位秒，默认10秒）
+   */
+  exitKeepAliveAfter?: number;
 };
 
 export class Speaker extends BaseSpeaker {
   heartbeat = 1000;
+  exitKeepAliveAfter = 10;
   currentMsg?: UserMessage;
+  currentQueryMsg?: UserMessage;
 
   constructor(config: SpeakerConfig) {
     super(config);
-    this.heartbeat = config.heartbeat ?? 1000;
     this._commands = config.commands ?? [];
+    this.heartbeat = config.heartbeat ?? this.heartbeat;
+    this.exitKeepAliveAfter =
+      config.exitKeepAliveAfter ?? this.exitKeepAliveAfter;
   }
 
   private _status: "running" | "stopped" = "running";
@@ -52,12 +60,13 @@ export class Speaker extends BaseSpeaker {
           setTimeout(async () => {
             await this.MiNA!.pause();
             if (this.keepAlive) {
-              await this.wakeUp();
+              await this.wakeUp({ fromQuery: false });
             }
           });
         } else {
           console.log("🔥 " + nextMsg.text);
           // 异步处理消息，不阻塞正常消息拉取
+          this.currentQueryMsg = nextMsg;
           this.onMessage(nextMsg);
         }
       }
@@ -99,9 +108,11 @@ export class Speaker extends BaseSpeaker {
         const answer = await command.run(msg);
         // 回复用户
         if (answer) {
-          await this.response(answer, {
-            keepAlive: this.keepAlive,
-          });
+          if (msg.timestamp === this.currentQueryMsg?.timestamp) {
+            await this.response(answer, {
+              keepAlive: this.keepAlive,
+            });
+          }
         }
         break;
       }
@@ -121,6 +132,21 @@ export class Speaker extends BaseSpeaker {
   async exitKeepAlive() {
     // 退出唤醒状态
     this.keepAlive = false;
+  }
+
+  async wakeUp(options?: { fromQuery?: boolean }) {
+    const { fromQuery = true } = options ?? {};
+    const res = await super.wakeUp();
+    if (fromQuery) {
+      // 一段时间没有收到新的用户请求消息时，自动退出唤醒状态
+      const lastMsg = this.currentQueryMsg?.timestamp;
+      setTimeout(async () => {
+        if (this.keepAlive && lastMsg === this.currentQueryMsg?.timestamp) {
+          await this.exitKeepAlive();
+        }
+      }, this.exitKeepAliveAfter * 1000);
+    }
+    return res;
   }
 
   private _tempMsgs: UserMessage[] = [];

@@ -5,9 +5,11 @@ import { Speaker, SpeakerCommand, SpeakerConfig } from "./speaker";
 export type AISpeakerConfig = SpeakerConfig & {
   askAI?: (msg: UserMessage) => Promise<string>;
   /**
-   * 没有新的请求多少秒之后，自动退出唤醒模式（默认10秒）
+   * 切换音色前缀
+   *
+   * 比如：音色切换到（文静猫猫）
    */
-  exitKeepAliveAfter?: number;
+  switchSpeakerPrefix?: string;
   /**
    * AI 开始回答时的提示语
    *
@@ -33,7 +35,7 @@ export type AISpeakerConfig = SpeakerConfig & {
    *
    * 比如：打开/进入/召唤豆包
    */
-  callAIKeyWords?: string[];
+  callAIPrefix?: string[];
   /**
    * 唤醒关键词
    *
@@ -69,38 +71,48 @@ type AnswerStep = (
 
 export class AISpeaker extends Speaker {
   askAI: AISpeakerConfig["askAI"];
-  exitKeepAliveAfter = 10;
-  onAIError: string[];
-  onAIAsking: string[];
-  name: string;
-  callAIKeyWords: string[];
-  wakeUpKeyWords: string[];
-  exitKeywords: string[];
+  switchSpeakerPrefix = "音色切换到";
+  name = "豆包";
+  callAIPrefix: string[];
+  wakeUpKeyWords = ["打开", "进入", "召唤"];
+  exitKeywords = ["关闭", "退出", "再见"];
   onEnterAI: string[];
   onExitAI: string[];
+  onAIError: string[];
+  onAIAsking: string[];
 
   constructor(config: AISpeakerConfig) {
     super(config);
-    this.exitKeepAliveAfter = config.exitKeepAliveAfter ?? 10;
-    this.heartbeat = config.heartbeat ?? 1000;
-    this.name = config.name ?? "豆包";
-    this.callAIKeyWords = config.callAIKeyWords ?? [this.name];
-    this.wakeUpKeyWords =
-      config.wakeUpKeyWords ??
-      ["打开", "进入", "召唤"].map((e) => e + this.name);
-    this.exitKeywords =
-      config.exitKeywords ?? ["关闭", "退出", "再见"].map((e) => e + this.name);
+    this.askAI = config.askAI;
+    this.switchSpeakerPrefix =
+      config.switchSpeakerPrefix ?? this.switchSpeakerPrefix;
+    this.name = config.name ?? this.name;
+    this.callAIPrefix = config.callAIPrefix ?? [
+      "请",
+      "你",
+      this.name,
+      "问问" + this.name,
+    ];
+    this.wakeUpKeyWords = (config.wakeUpKeyWords ?? this.wakeUpKeyWords).map(
+      (e) => e + this.name
+    );
+    this.exitKeywords = (config.exitKeywords ?? this.exitKeywords).map(
+      (e) => e + this.name
+    );
     this.onEnterAI = config.onEnterAI ?? [
       `你好，我是${this.name}，很高兴为你服务！`,
     ];
     this.onExitAI = config.onExitAI ?? [`${this.name}已关闭！`];
-    this.askAI = config.askAI;
-    this.onAIError = config.onAIError ?? ["啊哦，出错了，稍后再试吧！"];
-    this.onAIAsking = config.onAIAsking ?? ["让我想想", "请稍等"];
+    this.onAIError = config.onAIError ?? ["啊哦，出错了，请稍后再试吧！"];
+    this.onAIAsking = config.onAIAsking ?? ["让我先想想", "请稍等"];
   }
 
   private _askAIForAnswerSteps: AnswerStep[] = [
     async (msg, data) => {
+      // todo 等待音效
+
+      //or
+
       // 思考中
       await this.response(pickOne(this.onAIAsking)!, {
         keepAlive: this.keepAlive,
@@ -109,17 +121,25 @@ export class AISpeaker extends Speaker {
     async (msg, data) => {
       // 调用 LLM 获取回复
       let answer = await this.askAI?.(msg);
-      answer = answer ?? pickOne(this.onAIError);
       return { data: { answer } };
+    },
+    async (msg, data) => {
+      if (!data.answer) {
+        // todo 回答异常音效
+
+        // or
+
+        const answer = pickOne(this.onAIError);
+        return { data: { answer } };
+      }
     },
   ];
 
   async askAIForAnswer(msg: UserMessage) {
     let data: any = {};
-    const oldMsg = this.currentMsg?.timestamp;
     for (const action of this._askAIForAnswerSteps) {
       const res = await action(msg, data);
-      if (this.currentMsg?.timestamp !== oldMsg) {
+      if (this.currentQueryMsg?.timestamp !== msg.timestamp) {
         // 收到新的用户请求消息，终止后续操作和响应
         return;
       }
@@ -147,11 +167,24 @@ export class AISpeaker extends Speaker {
           await this.exitKeepAlive();
         },
       },
+      {
+        match: (msg) => msg.text.startsWith(this.switchSpeakerPrefix),
+        run: async (msg) => {
+          await this.response("正在切换音色，请稍等...", {
+            keepAlive: this.keepAlive,
+          });
+          const speaker = msg.text.replace(this.switchSpeakerPrefix, "");
+          const success = await this.switchDefaultSpeaker(speaker);
+          await this.response(success ? "音色已切换！" : "音色切换失败！", {
+            keepAlive: this.keepAlive,
+          });
+        },
+      },
       ...this._commands,
       {
         match: (msg) =>
           this.keepAlive ||
-          this.callAIKeyWords.some((e) => msg.text.includes(e)),
+          this.callAIPrefix.some((e) => msg.text.startsWith(e)),
         run: (msg) => this.askAIForAnswer(msg),
       },
     ] as SpeakerCommand[];
@@ -173,17 +206,5 @@ export class AISpeaker extends Speaker {
     await this.response(pickOne(this.onExitAI)!, {
       keepAlive: false,
     });
-  }
-
-  async wakeUp() {
-    const res = await super.wakeUp();
-    // 1 分钟内没有收到新的用户消息，自动退出唤醒状态
-    const lastMsg = this.currentMsg?.timestamp;
-    setTimeout(async () => {
-      if (this.keepAlive && lastMsg === this.currentMsg?.timestamp) {
-        await this.exitKeepAlive();
-      }
-    }, this.exitKeepAliveAfter * 1000);
-    return res;
   }
 }
