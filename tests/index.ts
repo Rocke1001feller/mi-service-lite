@@ -44,10 +44,10 @@ async function testAISpeaker(speaker: AISpeaker) {
 }
 
 async function testSwitchSpeaker(speaker: AISpeaker) {
-  await speaker.response("你好，我是豆包，很高兴认识你！");
+  await speaker.response({ text: "你好，我是豆包，很高兴认识你！" });
   const success = await speaker.switchDefaultSpeaker("魅力苏菲");
   console.log("switchDefaultSpeaker 魅力苏菲", success);
-  await speaker.response("你好，我是豆包，很高兴认识你！");
+  await speaker.response({ text: "你好，我是豆包，很高兴认识你！" });
   console.log("hello");
 }
 
@@ -61,7 +61,7 @@ async function testSpeakerGetMessages(speaker: AISpeaker) {
 async function testSpeakerResponse(speaker: AISpeaker) {
   let status = await speaker.MiNA!.getStatus();
   console.log("curent status", status);
-  speaker.response("你好，我是豆包，很高兴认识你！");
+  speaker.response({ text: "你好，我是豆包，很高兴认识你！" });
   sleep(1000);
   status = await speaker.MiNA!.getStatus();
   console.log("tts status", status);

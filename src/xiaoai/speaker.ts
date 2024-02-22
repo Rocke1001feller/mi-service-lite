@@ -75,17 +75,19 @@ export class Speaker extends BaseSpeaker {
   }
 
   preResponse = "";
-  async response(
-    text: string,
-    options?: {
-      speaker?: string;
-      keepAlive?: boolean;
+  async response(options: {
+    text?: string;
+    audio?: string;
+    speaker?: string;
+    keepAlive?: boolean;
+  }) {
+    const { text, audio } = options;
+    if (text) {
+      this.preResponse = removePunctuationAndSpaces(text);
     }
-  ) {
-    this.preResponse = removePunctuationAndSpaces(text);
-    console.log("✅ " + text);
+    console.log("✅ " + text ?? audio);
     const start = Date.now();
-    const res = await super.response(text, options);
+    const res = await super.response(options);
     console.log("🕙 " + formatDuration(start, Date.now()));
     return res;
   }
@@ -109,7 +111,8 @@ export class Speaker extends BaseSpeaker {
         // 回复用户
         if (answer) {
           if (msg.timestamp === this.currentQueryMsg?.timestamp) {
-            await this.response(answer, {
+            await this.response({
+              text: answer,
               keepAlive: this.keepAlive,
             });
           }

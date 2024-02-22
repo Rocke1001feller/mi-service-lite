@@ -57,26 +57,36 @@ export class BaseSpeaker {
     }
   }
 
-  async response(
-    text: string,
-    options?: {
-      speaker?: string;
-      keepAlive?: boolean;
-    }
-  ) {
-    const { keepAlive = false, speaker = this._defaultSpeaker } = options ?? {};
-    // 播放回复音频
-    switch (this.config.tts) {
-      case "doubao":
-        text = encodeURIComponent(text);
-        const doubaoTTS = process.env.TTS_DOUBAO;
-        const url = `${doubaoTTS}?speaker=${speaker}&text=${text}`;
-        await this.MiNA!.play({ url });
-        break;
-      case "xiaoai":
-      default:
-        await this.MiNA!.play({ tts: text });
-        break;
+  async response(options: {
+    text?: string;
+    audio?: string;
+    speaker?: string;
+    keepAlive?: boolean;
+  }) {
+    let {
+      text,
+      audio,
+      keepAlive = false,
+      speaker = this._defaultSpeaker,
+    } = options ?? {};
+    // 播放回复
+    if (audio) {
+      // 音频回复
+      await this.MiNA!.play({ url: audio });
+    } else if (text) {
+      // 文字回复
+      switch (this.config.tts) {
+        case "doubao":
+          text = encodeURIComponent(text);
+          const doubaoTTS = process.env.TTS_DOUBAO;
+          const url = `${doubaoTTS}?speaker=${speaker}&text=${text}`;
+          await this.MiNA!.play({ url });
+          break;
+        case "xiaoai":
+        default:
+          await this.MiNA!.play({ tts: text });
+          break;
+      }
     }
     // 等待回答播放完毕
     while (true) {

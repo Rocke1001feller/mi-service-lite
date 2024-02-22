@@ -114,7 +114,8 @@ export class AISpeaker extends Speaker {
       //or
 
       // 思考中
-      await this.response(pickOne(this.onAIAsking)!, {
+      await this.response({
+        text: pickOne(this.onAIAsking)!,
         keepAlive: this.keepAlive,
       });
     },
@@ -170,12 +171,14 @@ export class AISpeaker extends Speaker {
       {
         match: (msg) => msg.text.startsWith(this.switchSpeakerPrefix),
         run: async (msg) => {
-          await this.response("正在切换音色，请稍等...", {
+          await this.response({
+            text: "正在切换音色，请稍等...",
             keepAlive: this.keepAlive,
           });
           const speaker = msg.text.replace(this.switchSpeakerPrefix, "");
           const success = await this.switchDefaultSpeaker(speaker);
-          await this.response(success ? "音色已切换！" : "音色切换失败！", {
+          await this.response({
+            text: success ? "音色已切换！" : "音色切换失败！",
             keepAlive: this.keepAlive,
           });
         },
@@ -194,17 +197,13 @@ export class AISpeaker extends Speaker {
     // 唤醒
     await super.enterKeepAlive();
     // 回应
-    await this.response(pickOne(this.onEnterAI)!, {
-      keepAlive: true,
-    });
+    await this.response({ text: pickOne(this.onEnterAI)!, keepAlive: true });
   }
 
   async exitKeepAlive() {
     // 退出唤醒状态
     await super.exitKeepAlive();
     // 回应
-    await this.response(pickOne(this.onExitAI)!, {
-      keepAlive: false,
-    });
+    await this.response({ text: pickOne(this.onExitAI)!, keepAlive: false });
   }
 }
