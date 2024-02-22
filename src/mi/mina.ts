@@ -94,6 +94,8 @@ export class MiNA {
     | {
         volume: number;
         status: "idle" | "playing" | "paused" | "stopped" | "unknown";
+        media_type?: number;
+        loop_type?: number;
       }
     | undefined
   > {

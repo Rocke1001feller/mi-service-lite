@@ -71,24 +71,34 @@ type AnswerStep = (
 
 export class AISpeaker extends Speaker {
   askAI: AISpeakerConfig["askAI"];
-  switchSpeakerPrefix = "音色切换到";
-  name = "豆包";
+  name: string;
+  switchSpeakerPrefix: string;
   onEnterAI: string[];
   onExitAI: string[];
   callAIPrefix: string[];
-  wakeUpKeyWords = ["打开", "进入", "召唤"];
-  exitKeywords = ["关闭", "退出", "再见"];
-  onAIAsking = ["让我先想想", "请稍等"];
-  onAIError = ["啊哦，出错了，请稍后再试吧！"];
+  wakeUpKeyWords: string[];
+  exitKeywords: string[];
+  onAIAsking: string[];
+  onAIError: string[];
 
   constructor(config: AISpeakerConfig) {
     super(config);
-    this.askAI = config.askAI;
-    this.switchSpeakerPrefix =
-      config.switchSpeakerPrefix ?? this.switchSpeakerPrefix;
-    this.onAIError = config.onAIError ?? this.onAIError;
-    this.onAIAsking = config.onAIAsking ?? this.onAIAsking;
-    this.name = config.name ?? this.name;
+    const {
+      askAI,
+      name = "豆包",
+      switchSpeakerPrefix = "音色切换到",
+      wakeUpKeyWords = ["打开", "进入", "召唤"],
+      exitKeywords = ["关闭", "退出", "再见"],
+      onAIAsking = ["让我先想想", "请稍等"],
+      onAIError = ["啊哦，出错了，请稍后再试吧！"],
+    } = config;
+    this.askAI = askAI;
+    this.switchSpeakerPrefix = switchSpeakerPrefix;
+    this.name = name;
+    this.onAIError = onAIError;
+    this.onAIAsking = onAIAsking;
+    this.wakeUpKeyWords = wakeUpKeyWords.map((e) => e + this.name);
+    this.exitKeywords = exitKeywords.map((e) => e + this.name);
     this.onEnterAI = config.onEnterAI ?? [
       `你好，我是${this.name}，很高兴为你服务！`,
     ];
@@ -99,19 +109,13 @@ export class AISpeaker extends Speaker {
       this.name,
       "问问" + this.name,
     ];
-    this.wakeUpKeyWords = (config.wakeUpKeyWords ?? this.wakeUpKeyWords).map(
-      (e) => e + this.name
-    );
-    this.exitKeywords = (config.exitKeywords ?? this.exitKeywords).map(
-      (e) => e + this.name
-    );
   }
 
   private _askAIForAnswerSteps: AnswerStep[] = [
     async (msg, data) => {
       // 思考中
       await this.response({
-        audio: process.env.AUDIO_LOADING,
+        audio: process.env.AUDIO_ACTIVE,
         text: pickOne(this.onAIAsking)!,
         keepAlive: this.keepAlive,
       });
@@ -191,10 +195,10 @@ export class AISpeaker extends Speaker {
   }
 
   async enterKeepAlive() {
-    // 唤醒
-    await super.enterKeepAlive();
     // 回应
     await this.response({ text: pickOne(this.onEnterAI)!, keepAlive: true });
+    // 唤醒
+    await super.enterKeepAlive();
   }
 
   async exitKeepAlive() {

@@ -13,7 +13,7 @@ export interface SpeakerCommand {
 
 export type SpeakerConfig = BaseSpeakerConfig & {
   /**
-   * 拉取消息心跳间隔，默认1秒，单位毫秒
+   * 拉取消息心跳间隔（单位毫秒，默认1秒）
    */
   heartbeat?: number;
   /**
@@ -21,23 +21,23 @@ export type SpeakerConfig = BaseSpeakerConfig & {
    */
   commands?: SpeakerCommand[];
   /**
-   * 没有新的用户请求之后，多久自动退出唤醒模式（单位秒，默认10秒）
+   * 无响应一段时间后，多久自动退出唤醒模式（单位秒，默认30秒）
    */
   exitKeepAliveAfter?: number;
 };
 
 export class Speaker extends BaseSpeaker {
-  heartbeat = 1000;
-  exitKeepAliveAfter = 10;
+  heartbeat: number;
+  exitKeepAliveAfter: number;
   currentMsg?: UserMessage;
   currentQueryMsg?: UserMessage;
 
   constructor(config: SpeakerConfig) {
     super(config);
+    const { heartbeat = 1000, exitKeepAliveAfter = 30 } = config;
     this._commands = config.commands ?? [];
-    this.heartbeat = config.heartbeat ?? this.heartbeat;
-    this.exitKeepAliveAfter =
-      config.exitKeepAliveAfter ?? this.exitKeepAliveAfter;
+    this.heartbeat = heartbeat;
+    this.exitKeepAliveAfter = exitKeepAliveAfter;
   }
 
   private _status: "running" | "stopped" = "running";
@@ -51,16 +51,19 @@ export class Speaker extends BaseSpeaker {
     if (!this.MiNA) {
       this.stop();
     }
+    console.log("✅ 服务已启动...");
+    this.activeKeepAliveMode();
     while (this._status === "running") {
       const nextMsg = await this.fetchNextMessage();
       if (nextMsg) {
+        this.responding = false;
         if (this.preResponse.startsWith(nextMsg.text)) {
           // 有时会把上一次的 TTS 响应识别成用户指令
           console.log("🚗 " + nextMsg.text);
           setTimeout(async () => {
             await this.MiNA!.pause();
             if (this.keepAlive) {
-              await this.wakeUp({ fromQuery: false });
+              await this.wakeUp();
             }
           });
         } else {
@@ -74,20 +77,46 @@ export class Speaker extends BaseSpeaker {
     }
   }
 
+  async activeKeepAliveMode() {
+    while (this._status === "running") {
+      if (this.keepAlive) {
+        // 唤醒中
+        if (!this.responding) {
+          // 没有回复时，一直播放静音音频使小爱闭嘴
+          // console.log("❌ mute xiaoai...");
+          await this.MiNA?.play({ url: process.env.AUDIO_SILENT });
+        } else {
+          // console.log("🔊 responding...");
+        }
+      }
+      await sleep(this.interval);
+    }
+  }
+
   preResponse = "";
+  responding = false;
   async response(options: {
     text?: string;
     audio?: string;
     speaker?: string;
     keepAlive?: boolean;
+    playSFX?: boolean;
+    isNotResponding?: () => boolean;
   }) {
     const { text, audio } = options;
     if (text) {
       this.preResponse = removePunctuationAndSpaces(text);
     }
+    const currentMsg = this.currentMsg?.timestamp;
+    options.isNotResponding = () => {
+      // 有新的消息进入，旧的响应被打断
+      return !this.responding || currentMsg !== this.currentMsg?.timestamp;
+    };
     console.log("✅ " + text ?? audio);
     const start = Date.now();
+    this.responding = true;
     const res = await super.response(options);
+    this.responding = false;
     console.log("🕙 " + formatDuration(start, Date.now()));
     return res;
   }
@@ -117,7 +146,8 @@ export class Speaker extends BaseSpeaker {
             });
           }
         }
-        break;
+        await this.exitKeepAliveIfNeeded();
+        return;
       }
     }
   }
@@ -137,19 +167,22 @@ export class Speaker extends BaseSpeaker {
     this.keepAlive = false;
   }
 
-  async wakeUp(options?: { fromQuery?: boolean }) {
-    const { fromQuery = true } = options ?? {};
-    const res = await super.wakeUp();
-    if (fromQuery) {
-      // 一段时间没有收到新的用户请求消息时，自动退出唤醒状态
-      const lastMsg = this.currentQueryMsg?.timestamp;
-      setTimeout(async () => {
-        if (this.keepAlive && lastMsg === this.currentQueryMsg?.timestamp) {
-          await this.exitKeepAlive();
-        }
-      }, this.exitKeepAliveAfter * 1000);
+  private _preTimer: any;
+  async exitKeepAliveIfNeeded() {
+    // 无响应一段时间后自动退出唤醒状态
+    if (this._preTimer) {
+      clearTimeout(this._preTimer);
     }
-    return res;
+    const currentMsg = this.currentQueryMsg?.timestamp;
+    this._preTimer = setTimeout(async () => {
+      if (
+        this.keepAlive &&
+        !this.responding &&
+        currentMsg === this.currentQueryMsg?.timestamp
+      ) {
+        await this.exitKeepAlive();
+      }
+    }, this.exitKeepAliveAfter * 1000);
   }
 
   private _tempMsgs: UserMessage[] = [];

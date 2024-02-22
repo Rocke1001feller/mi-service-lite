@@ -16,7 +16,7 @@ type Speaker = {
 export type BaseSpeakerConfig = MiServiceConfig & {
   // 语音合成服务商
   tts?: TTSProvider;
-  // 检测间隔，单位毫秒（默认1秒）
+  // 检测间隔（单位毫秒，默认 100 毫秒）
   interval?: number;
 };
 
@@ -24,10 +24,14 @@ export class BaseSpeaker {
   MiNA?: MiNA;
   MiIOT?: MiIOT;
 
-  config: BaseSpeakerConfig;
+  interval: number;
+  tts: TTSProvider;
+  config: MiServiceConfig;
   constructor(config: BaseSpeakerConfig) {
-    const { interval = 1000, tts = "doubao" } = config;
-    this.config = { ...config, interval, tts };
+    this.config = config;
+    const { interval = 100, tts = "doubao" } = config;
+    this.interval = interval;
+    this.tts = tts;
   }
 
   async initMiServices() {
@@ -62,10 +66,14 @@ export class BaseSpeaker {
     audio?: string;
     speaker?: string;
     keepAlive?: boolean;
+    playSFX?: boolean;
+    isNotResponding?: () => boolean;
   }) {
     let {
       text,
       audio,
+      isNotResponding,
+      playSFX = true,
       keepAlive = false,
       speaker = this._defaultSpeaker,
     } = options ?? {};
@@ -75,8 +83,12 @@ export class BaseSpeaker {
       await this.MiNA!.play({ url: audio });
     } else if (text) {
       // 文字回复
-      switch (this.config.tts) {
+      switch (this.tts) {
         case "doubao":
+          if (playSFX) {
+            // 播放开始提示音
+            await this.MiNA!.play({ url: process.env.AUDIO_BEEP });
+          }
           text = encodeURIComponent(text);
           const doubaoTTS = process.env.TTS_DOUBAO;
           const url = `${doubaoTTS}?speaker=${speaker}&text=${text}`;
@@ -91,10 +103,21 @@ export class BaseSpeaker {
     // 等待回答播放完毕
     while (true) {
       const res = await this.MiNA!.getStatus();
+      if (
+        isNotResponding?.() || // 有新消息
+        (res?.status === "playing" && res?.media_type) // 小爱自己开始播放音乐
+      ) {
+        // 响应被中断
+        return;
+      }
       if (res?.status && res.status !== "playing") {
         break;
       }
-      await sleep(this.config.interval!);
+      await sleep(this.interval);
+    }
+    // 播放结束提示音
+    if (!audio && playSFX) {
+      await this.MiNA!.play({ url: process.env.AUDIO_BEEP });
     }
     // 保持唤醒状态
     if (keepAlive) {

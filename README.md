@@ -2,6 +2,11 @@
 
 XiaoMi Cloud Service for mi.com
 
+## TODOs
+
+- Auto mute XiaoAi reply
+- Stream response
+
 ## ⚡️ Installation
 
 ```
