@@ -1,5 +1,4 @@
 import { firstOf, lastOf, sleep } from "../utils/base";
-import { formatDuration } from "../utils/string";
 import { BaseSpeaker, BaseSpeakerConfig } from "./base";
 
 export interface QueryMessage {
@@ -85,31 +84,6 @@ export class Speaker extends BaseSpeaker {
     }
   }
 
-  responding = false;
-  async response(options: {
-    text?: string;
-    audio?: string;
-    speaker?: string;
-    keepAlive?: boolean;
-    playSFX?: boolean;
-  }) {
-    const { text, audio } = options;
-    const currentQueryMsg = this.currentQueryMsg?.timestamp;
-    (options as any).isNotResponding = () => {
-      // 有新的消息进入，旧的响应被打断
-      return (
-        !this.responding || currentQueryMsg !== this.currentQueryMsg?.timestamp
-      );
-    };
-    console.log("✅ " + text ?? audio);
-    const start = Date.now();
-    this.responding = true;
-    const res = await super.response(options);
-    this.responding = false;
-    console.log("🕙 " + formatDuration(start, Date.now()));
-    return res;
-  }
-
   _commands: SpeakerCommand[] = [];
   get commands() {
     return this._commands;
@@ -120,6 +94,7 @@ export class Speaker extends BaseSpeaker {
   }
 
   async onMessage(msg: QueryMessage) {
+    const { noNewMsg } = this.checkIfHasNewMsg(msg);
     for (const command of this.commands) {
       if (command.match(msg)) {
         // 关闭小爱的回复
@@ -128,7 +103,7 @@ export class Speaker extends BaseSpeaker {
         const answer = await command.run(msg);
         // 回复用户
         if (answer) {
-          if (msg.timestamp === this.currentQueryMsg?.timestamp) {
+          if (noNewMsg()) {
             await this.response({
               text: answer,
               keepAlive: this.keepAlive,
@@ -162,16 +137,20 @@ export class Speaker extends BaseSpeaker {
     if (this._preTimer) {
       clearTimeout(this._preTimer);
     }
-    const currentQueryMsg = this.currentQueryMsg?.timestamp;
+    const { noNewMsg } = this.checkIfHasNewMsg();
     this._preTimer = setTimeout(async () => {
-      if (
-        this.keepAlive &&
-        !this.responding &&
-        currentQueryMsg === this.currentQueryMsg?.timestamp
-      ) {
+      if (this.keepAlive && !this.responding && noNewMsg()) {
         await this.exitKeepAlive();
       }
     }, this.exitKeepAliveAfter * 1000);
+  }
+
+  checkIfHasNewMsg(currentMsg?: QueryMessage) {
+    const currentTimestamp = (currentMsg ?? this.currentQueryMsg)?.timestamp;
+    return {
+      hasNewMsg: () => currentTimestamp !== this.currentQueryMsg?.timestamp,
+      noNewMsg: () => currentTimestamp === this.currentQueryMsg?.timestamp,
+    };
   }
 
   private _tempMsgs: QueryMessage[] = [];

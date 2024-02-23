@@ -201,9 +201,10 @@ export class AISpeaker extends Speaker {
 
   async askAIForAnswer(msg: QueryMessage) {
     let data: any = {};
+    const { hasNewMsg } = this.checkIfHasNewMsg(msg);
     for (const action of this._askAIForAnswerSteps) {
       const res = await action(msg, data);
-      if (this.currentQueryMsg?.timestamp !== msg.timestamp) {
+      if (hasNewMsg()) {
         // 收到新的用户请求消息，终止后续操作和响应
         return;
       }
