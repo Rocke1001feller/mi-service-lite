@@ -1,14 +1,22 @@
-import { UserMessage } from "../mi/types";
 import { firstOf, lastOf, sleep } from "../utils/base";
-import { formatDuration, removePunctuationAndSpaces } from "../utils/string";
+import { formatDuration } from "../utils/string";
 import { BaseSpeaker, BaseSpeakerConfig } from "./base";
 
+export interface QueryMessage {
+  text: string;
+  answer: string;
+  /**
+   * 毫秒
+   */
+  timestamp: number;
+}
+
 export interface SpeakerCommand {
-  match: (msg: UserMessage) => boolean;
+  match: (msg: QueryMessage) => boolean;
   /**
    * 命中后执行的操作，返回值非空时会自动回复给用户
    */
-  run: (msg: UserMessage) => Promise<string | undefined | void>;
+  run: (msg: QueryMessage) => Promise<string | undefined | void>;
 }
 
 export type SpeakerConfig = BaseSpeakerConfig & {
@@ -29,8 +37,7 @@ export type SpeakerConfig = BaseSpeakerConfig & {
 export class Speaker extends BaseSpeaker {
   heartbeat: number;
   exitKeepAliveAfter: number;
-  currentMsg?: UserMessage;
-  currentQueryMsg?: UserMessage;
+  currentQueryMsg?: QueryMessage;
 
   constructor(config: SpeakerConfig) {
     super(config);
@@ -59,7 +66,6 @@ export class Speaker extends BaseSpeaker {
         this.responding = false;
         console.log("🔥 " + nextMsg.text);
         // 异步处理消息，不阻塞正常消息拉取
-        this.currentQueryMsg = nextMsg;
         this.onMessage(nextMsg);
       }
       await sleep(this.heartbeat);
@@ -88,10 +94,12 @@ export class Speaker extends BaseSpeaker {
     playSFX?: boolean;
   }) {
     const { text, audio } = options;
-    const currentMsg = this.currentMsg?.timestamp;
+    const currentQueryMsg = this.currentQueryMsg?.timestamp;
     (options as any).isNotResponding = () => {
       // 有新的消息进入，旧的响应被打断
-      return !this.responding || currentMsg !== this.currentMsg?.timestamp;
+      return (
+        !this.responding || currentQueryMsg !== this.currentQueryMsg?.timestamp
+      );
     };
     console.log("✅ " + text ?? audio);
     const start = Date.now();
@@ -111,7 +119,7 @@ export class Speaker extends BaseSpeaker {
     this.commands.push(command);
   }
 
-  async onMessage(msg: UserMessage) {
+  async onMessage(msg: QueryMessage) {
     for (const command of this.commands) {
       if (command.match(msg)) {
         // 关闭小爱的回复
@@ -154,21 +162,21 @@ export class Speaker extends BaseSpeaker {
     if (this._preTimer) {
       clearTimeout(this._preTimer);
     }
-    const currentMsg = this.currentQueryMsg?.timestamp;
+    const currentQueryMsg = this.currentQueryMsg?.timestamp;
     this._preTimer = setTimeout(async () => {
       if (
         this.keepAlive &&
         !this.responding &&
-        currentMsg === this.currentQueryMsg?.timestamp
+        currentQueryMsg === this.currentQueryMsg?.timestamp
       ) {
         await this.exitKeepAlive();
       }
     }, this.exitKeepAliveAfter * 1000);
   }
 
-  private _tempMsgs: UserMessage[] = [];
-  async fetchNextMessage(): Promise<UserMessage | undefined> {
-    if (!this.currentMsg) {
+  private _tempMsgs: QueryMessage[] = [];
+  async fetchNextMessage(): Promise<QueryMessage | undefined> {
+    if (!this.currentQueryMsg) {
       await this._fetchFirstMessage();
       // 第一条消息仅用作初始化消息游标，不响应
       return;
@@ -181,10 +189,10 @@ export class Speaker extends BaseSpeaker {
       limit: 1,
       filterTTS: false,
     });
-    this.currentMsg = msgs[0];
+    this.currentQueryMsg = msgs[0];
   }
 
-  private async _fetchNextMessage(): Promise<UserMessage | undefined> {
+  private async _fetchNextMessage(): Promise<QueryMessage | undefined> {
     if (this._tempMsgs.length > 0) {
       // 当前有暂存的新消息（从新到旧），依次处理之
       return this._fetchNextTempMessage();
@@ -203,23 +211,23 @@ export class Speaker extends BaseSpeaker {
     let msgs = await this.getMessages({ limit: 2 });
     if (
       msgs.length < 1 ||
-      firstOf(msgs)!.timestamp <= this.currentMsg!.timestamp
+      firstOf(msgs)!.timestamp <= this.currentQueryMsg!.timestamp
     ) {
       // 没有拉到新消息
       return;
     }
     if (
-      firstOf(msgs)!.timestamp > this.currentMsg!.timestamp &&
+      firstOf(msgs)!.timestamp > this.currentQueryMsg!.timestamp &&
       (msgs.length === 1 ||
-        lastOf(msgs)!.timestamp <= this.currentMsg!.timestamp)
+        lastOf(msgs)!.timestamp <= this.currentQueryMsg!.timestamp)
     ) {
       // 刚好收到一条新消息
-      this.currentMsg = firstOf(msgs);
-      return this.currentMsg;
+      this.currentQueryMsg = firstOf(msgs);
+      return this.currentQueryMsg;
     }
     // 还有其他新消息，暂存当前的新消息
     for (const msg of msgs) {
-      if (msg.timestamp > this.currentMsg!.timestamp) {
+      if (msg.timestamp > this.currentQueryMsg!.timestamp) {
         this._tempMsgs.push(msg);
       }
     }
@@ -228,7 +236,7 @@ export class Speaker extends BaseSpeaker {
 
   private _fetchNextTempMessage() {
     const nextMsg = this._tempMsgs.pop();
-    this.currentMsg = nextMsg;
+    this.currentQueryMsg = nextMsg;
     return nextMsg;
   }
 
@@ -250,7 +258,7 @@ export class Speaker extends BaseSpeaker {
         if (msg.timestamp >= nextTimestamp) {
           // 忽略上一页的消息
           continue;
-        } else if (msg.timestamp > this.currentMsg!.timestamp) {
+        } else if (msg.timestamp > this.currentQueryMsg!.timestamp) {
           // 继续添加新消息
           this._tempMsgs.push(msg);
         } else {
@@ -265,7 +273,7 @@ export class Speaker extends BaseSpeaker {
     limit?: number;
     timestamp?: number;
     filterTTS?: boolean;
-  }): Promise<UserMessage[]> {
+  }): Promise<QueryMessage[]> {
     const filterTTS = options?.filterTTS ?? true;
     const conversation = await this.MiNA!.getConversations(options);
     let records = conversation?.records ?? [];

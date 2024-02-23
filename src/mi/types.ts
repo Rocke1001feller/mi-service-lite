@@ -98,12 +98,3 @@ export interface MiConversations {
   }[];
   nextEndTime: number;
 }
-
-export interface UserMessage {
-  text: string;
-  answer: string;
-  /**
-   * 毫秒
-   */
-  timestamp: number;
-}

@@ -1,9 +1,13 @@
-import { UserMessage } from "../mi/types";
 import { pickOne } from "../utils/base";
-import { Speaker, SpeakerCommand, SpeakerConfig } from "./speaker";
+import {
+  Speaker,
+  SpeakerCommand,
+  SpeakerConfig,
+  QueryMessage,
+} from "./speaker";
 
 export type AISpeakerConfig = SpeakerConfig & {
-  askAI?: (msg: UserMessage) => Promise<string>;
+  askAI?: (msg: QueryMessage) => Promise<string>;
   /**
    * 切换音色前缀
    *
@@ -195,7 +199,7 @@ export class AISpeaker extends Speaker {
     },
   ];
 
-  async askAIForAnswer(msg: UserMessage) {
+  async askAIForAnswer(msg: QueryMessage) {
     let data: any = {};
     for (const action of this._askAIForAnswerSteps) {
       const res = await action(msg, data);
