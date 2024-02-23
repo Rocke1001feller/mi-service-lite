@@ -2,7 +2,7 @@ import { md5, sha1 } from "../utils/hash";
 import { Http } from "../utils/http";
 import { encodeQuery, parseAuthPass } from "../utils/codec";
 import { MiNA } from "./mina";
-import { MiAccount, MiIOTDevice, MiPass, MinaDevice } from "./types";
+import { MiAccount, MiPass } from "./types";
 import { MiIOT } from "./miot";
 
 const kLoginAPI = "https://account.xiaomi.com/pass";
