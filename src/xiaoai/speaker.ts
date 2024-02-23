@@ -57,21 +57,10 @@ export class Speaker extends BaseSpeaker {
       const nextMsg = await this.fetchNextMessage();
       if (nextMsg) {
         this.responding = false;
-        if (this.preResponse.startsWith(nextMsg.text)) {
-          // 有时会把上一次的 TTS 响应识别成用户指令
-          console.log("🚗 " + nextMsg.text);
-          setTimeout(async () => {
-            await this.MiNA!.pause();
-            if (this.keepAlive) {
-              await this.wakeUp();
-            }
-          });
-        } else {
-          console.log("🔥 " + nextMsg.text);
-          // 异步处理消息，不阻塞正常消息拉取
-          this.currentQueryMsg = nextMsg;
-          this.onMessage(nextMsg);
-        }
+        console.log("🔥 " + nextMsg.text);
+        // 异步处理消息，不阻塞正常消息拉取
+        this.currentQueryMsg = nextMsg;
+        this.onMessage(nextMsg);
       }
       await sleep(this.heartbeat);
     }
@@ -83,17 +72,13 @@ export class Speaker extends BaseSpeaker {
         // 唤醒中
         if (!this.responding) {
           // 没有回复时，一直播放静音音频使小爱闭嘴
-          // console.log("❌ mute xiaoai...");
           await this.MiNA?.play({ url: process.env.AUDIO_SILENT });
-        } else {
-          // console.log("🔊 responding...");
         }
       }
       await sleep(this.interval);
     }
   }
 
-  preResponse = "";
   responding = false;
   async response(options: {
     text?: string;
@@ -103,9 +88,6 @@ export class Speaker extends BaseSpeaker {
     playSFX?: boolean;
   }) {
     const { text, audio } = options;
-    if (text) {
-      this.preResponse = removePunctuationAndSpaces(text);
-    }
     const currentMsg = this.currentMsg?.timestamp;
     (options as any).isNotResponding = () => {
       // 有新的消息进入，旧的响应被打断
@@ -118,7 +100,7 @@ export class Speaker extends BaseSpeaker {
     this.responding = false;
     console.log("🕙 " + formatDuration(start, Date.now()));
     return res;
-  } 
+  }
 
   _commands: SpeakerCommand[] = [];
   get commands() {
