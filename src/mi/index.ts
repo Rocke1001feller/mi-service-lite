@@ -17,8 +17,12 @@ export async function getMiService(config: {
   password: string;
   did?: string;
 }) {
-  const randomDeviceId = "android_" + uuid();
   const { service, userId, password, did } = config;
+  if (!userId || !password) {
+    console.error("Missing userId or password.");
+    return;
+  }
+  const randomDeviceId = "android_" + uuid();
   let account: MiAccount | undefined;
   const store: Store = (await readJSON(kConfigFile)) ?? {};
   account = await getAccount({
