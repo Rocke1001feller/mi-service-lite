@@ -76,7 +76,7 @@ export class MiNA {
     return MiNA.__callMina(this.account, method, path, data);
   }
 
-  private _callUbus(scope: string, command: string, message?: any) {
+  ubus(scope: string, command: string, message?: any) {
     message = jsonEncode(message ?? {});
     return this._callMina("POST", "/remote/ubus", {
       deviceId: this.account.device?.deviceId,
@@ -92,14 +92,14 @@ export class MiNA {
 
   async getStatus(): Promise<
     | {
-        volume: number;
-        status: "idle" | "playing" | "paused" | "stopped" | "unknown";
-        media_type?: number;
-        loop_type?: number;
-      }
+      volume: number;
+      status: "idle" | "playing" | "paused" | "stopped" | "unknown";
+      media_type?: number;
+      loop_type?: number;
+    }
     | undefined
   > {
-    const data = await this._callUbus("mediaplayer", "player_get_play_status");
+    const data = await this.ubus("mediaplayer", "player_get_play_status");
     const res = jsonDecode(data?.info);
     if (!data || data.code !== 0 || !res) {
       return;
@@ -119,7 +119,7 @@ export class MiNA {
 
   async setVolume(volume: number) {
     volume = Math.round(clamp(volume, 6, 100));
-    const res = await this._callUbus("mediaplayer", "player_set_volume", {
+    const res = await this.ubus("mediaplayer", "player_set_volume", {
       volume: volume,
     });
     return res?.code === 0;
@@ -129,17 +129,17 @@ export class MiNA {
     let res;
     const { tts, url } = options ?? {};
     if (tts) {
-      res = await this._callUbus("mibrain", "text_to_speech", {
+      res = await this.ubus("mibrain", "text_to_speech", {
         text: tts,
         save: 0,
       });
     } else if (url) {
-      res = await this._callUbus("mediaplayer", "player_play_url", {
+      res = await this.ubus("mediaplayer", "player_play_url", {
         url,
         type: 1,
       });
     } else {
-      res = await this._callUbus("mediaplayer", "player_play_operation", {
+      res = await this.ubus("mediaplayer", "player_play_operation", {
         action: "play",
       });
     }
@@ -147,21 +147,21 @@ export class MiNA {
   }
 
   async pause() {
-    const res = await this._callUbus("mediaplayer", "player_play_operation", {
+    const res = await this.ubus("mediaplayer", "player_play_operation", {
       action: "pause",
     });
     return res?.code === 0;
   }
 
   async playOrPause() {
-    const res = await this._callUbus("mediaplayer", "player_play_operation", {
+    const res = await this.ubus("mediaplayer", "player_play_operation", {
       action: "toggle",
     });
     return res?.code === 0;
   }
 
   async stop() {
-    const res = await this._callUbus("mediaplayer", "player_play_operation", {
+    const res = await this.ubus("mediaplayer", "player_play_operation", {
       action: "stop",
     });
     return res?.code === 0;
