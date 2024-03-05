@@ -1,5 +1,7 @@
 import { decodeMiIOT, encodeMiIOT, encodeQuery } from "../utils/codec";
+import { Debugger } from "../utils/debug";
 import { Http } from "../utils/http";
+import { jsonEncode } from "../utils/json";
 import { MiAccount, MiIOTDevice } from "./types";
 
 type MiIOTMiAccount = MiAccount & { device: MiIOTDevice };
@@ -19,6 +21,9 @@ export class MiIOT {
       getVirtualModel: false,
       getHuamiDevices: 0,
     });
+    if (Debugger.enableTrace) {
+      console.log("MiIOT getDevice: ", jsonEncode(res, { prettier: true }));
+    }
     const device = (res?.list ?? []).find((e: any) =>
       [e.did, e.name].includes(account.did)
     );

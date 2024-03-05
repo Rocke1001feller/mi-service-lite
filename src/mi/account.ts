@@ -4,6 +4,8 @@ import { encodeQuery, parseAuthPass } from "../utils/codec";
 import { MiNA } from "./mina";
 import { MiAccount, MiPass } from "./types";
 import { MiIOT } from "./miot";
+import { Debugger } from "../utils/debug";
+import { jsonEncode } from "../utils/json";
 
 const kLoginAPI = "https://account.xiaomi.com/pass";
 
@@ -51,8 +53,17 @@ export async function getAccount(
     return undefined;
   }
   account = { ...account, pass, serviceToken };
+  if (Debugger.enableTrace) {
+    console.log("Temp Account: ", jsonEncode(account, { prettier: true }));
+  }
   account = await MiNA.getDevice(account as any);
+  if (Debugger.enableTrace) {
+    console.log("MiNA Account: ", jsonEncode(account, { prettier: true }));
+  }
   account = await MiIOT.getDevice(account as any);
+  if (Debugger.enableTrace) {
+    console.log("MiIOT Account: ", jsonEncode(account, { prettier: true }));
+  }
   if (account.did && !account.device) {
     console.error("找不到设备：" + account.did);
     return undefined;

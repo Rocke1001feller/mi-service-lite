@@ -1,5 +1,6 @@
 import { clamp } from "../utils/base";
 import { encodeQuery } from "../utils/codec";
+import { Debugger } from "../utils/debug";
 import { uuid } from "../utils/hash";
 import { Http } from "../utils/http";
 import { jsonDecode, jsonEncode } from "../utils/json";
@@ -23,6 +24,9 @@ export class MiNA {
       "GET",
       "/admin/v2/device_list"
     );
+    if (Debugger.enableTrace) {
+      console.log("MiNA getDevice: ", jsonEncode(devices, { prettier: true }));
+    }
     const device = (devices ?? []).find((e: any) =>
       [e.deviceID, e.name, e.alias].includes(account.did)
     );
@@ -92,11 +96,11 @@ export class MiNA {
 
   async getStatus(): Promise<
     | {
-      volume: number;
-      status: "idle" | "playing" | "paused" | "stopped" | "unknown";
-      media_type?: number;
-      loop_type?: number;
-    }
+        volume: number;
+        status: "idle" | "playing" | "paused" | "stopped" | "unknown";
+        media_type?: number;
+        loop_type?: number;
+      }
     | undefined
   > {
     const data = await this.ubus("mediaplayer", "player_get_play_status");
