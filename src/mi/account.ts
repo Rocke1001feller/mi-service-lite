@@ -30,7 +30,6 @@ export async function getAccount(
       sid: account.sid,
       _sign: pass._sign,
       callback: pass.callback,
-      cc: "+86",
       user: account.userId,
       hash: md5(account.password).toUpperCase(),
     };
@@ -45,7 +44,10 @@ export async function getAccount(
   }
   if (!pass.location || !pass.nonce || !pass.passToken) {
     if (pass.notificationUrl || pass.captchaUrl) {
-      console.log("❌ security verification is required for this login.");
+      console.log(
+        "此次登录需要安全验证，请在浏览器打开以下链接，并按照提示授权验证账号（注意：授权成功后，大约需要等待 30 分钟左右账号信息才会更新，请在更新后尝试重新登录）:\n " +
+          (pass.notificationUrl || pass.captchaUrl)
+      );
     }
     console.error("login failed", res);
 
