@@ -44,7 +44,11 @@ export async function getAccount(
     pass = parseAuthPass(res);
   }
   if (!pass.location || !pass.nonce || !pass.passToken) {
+    if (pass.notificationUrl || pass.captchaUrl) {
+      console.log("❌ security verification is required for this login.");
+    }
     console.error("login failed", res);
+
     return undefined;
   }
   // 刷新登录态

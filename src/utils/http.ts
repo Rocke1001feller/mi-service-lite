@@ -27,6 +27,11 @@ type RequestConfig = AxiosRequestConfig<any> & {
   cookies?: Record<string, string | number | boolean | undefined>;
 };
 
+_http.interceptors.request.use((req) => {
+  req.url = (process.env.MI_PROXY ?? "") + req.url;
+  return req;
+});
+
 _http.interceptors.response.use(
   (res) => {
     const config: any = res.config;

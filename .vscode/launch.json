@@ -2,17 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Test.ts",
+      "name": "Test",
       "type": "node",
       "request": "launch",
       "args": ["${workspaceFolder}/tests/index.ts"],
-      "runtimeArgs": [
-        "--no-warnings",
-        "--experimental-specifier-resolution=node",
-        "--loader",
-        "./tests/esm-loader.js"
-      ],
+      "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/tsx",
       "cwd": "${workspaceRoot}",
+      "envFile": "${workspaceFolder}/.env",
       "internalConsoleOptions": "openOnSessionStart"
     }
   ]

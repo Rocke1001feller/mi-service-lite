@@ -15,6 +15,8 @@ export function decodeBase64(base64Encoded: string) {
 export function parseAuthPass(res: string): {
   code?: number;
   description?: string;
+  captchaUrl?: string;
+  notificationUrl?: string;
 } & MiPass {
   try {
     return (

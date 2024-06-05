@@ -1,19 +1,16 @@
 import { assert } from "console";
 import { getMiIOT, getMiNA } from "../src/index";
 
-import dotenv from "dotenv";
 import { MiNA } from "../src/mi/mina";
 import { MiIOT } from "../src/mi/miot";
 import { sleep } from "../src/utils/base";
-
-dotenv.config();
 
 async function main() {
   const config: any = {
     userId: process.env.MI_USER!,
     password: process.env.MI_PASS!,
     did: process.env.MI_DID,
-    tts: "doubao",
+    tts: "xiaoai",
   };
 
   const miServices = await getMiServices(config);
