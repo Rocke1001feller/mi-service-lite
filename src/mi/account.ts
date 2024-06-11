@@ -18,7 +18,7 @@ export async function getAccount(
     { cookies: _getLoginCookies(account) }
   );
   if (res.isError) {
-    console.error("serviceLogin failed", res);
+    console.error("登录失败", res);
     return undefined;
   }
   let pass = parseAuthPass(res);
@@ -37,7 +37,7 @@ export async function getAccount(
       cookies: _getLoginCookies(account),
     });
     if (res.isError) {
-      console.error("serviceLoginAuth2 failed", res);
+      console.error("小米账号 OAuth2 登录失败", res);
       return undefined;
     }
     pass = parseAuthPass(res);
@@ -45,11 +45,14 @@ export async function getAccount(
   if (!pass.location || !pass.nonce || !pass.passToken) {
     if (pass.notificationUrl || pass.captchaUrl) {
       console.log(
-        "此次登录需要安全验证，请在浏览器打开以下链接，并按照提示授权验证账号（注意：授权成功后，大约需要等待 30 分钟左右账号信息才会更新，请在更新后尝试重新登录）:\n " +
-          (pass.notificationUrl || pass.captchaUrl)
+        "触发小米账号异地登录安全验证机制，请在浏览器打开以下链接，并按照网页提示授权验证账号："
+      );
+      console.log(pass.notificationUrl || pass.captchaUrl);
+      console.log(
+        "注意：授权成功后，大约需要等待 30 分钟左右账号信息才会更新，请在更新后再尝试重新登录。"
       );
     }
-    console.error("login failed", res);
+    console.error("小米账号登录失败", res);
 
     return undefined;
   }
@@ -60,18 +63,19 @@ export async function getAccount(
   }
   account = { ...account, pass, serviceToken };
   if (Debugger.enableTrace) {
-    console.log("Temp Account: ", jsonEncode(account, { prettier: true }));
+    console.log("小米账号: ", jsonEncode(account, { prettier: true }));
   }
   account = await MiNA.getDevice(account as any);
   if (Debugger.enableTrace) {
-    console.log("MiNA Account: ", jsonEncode(account, { prettier: true }));
+    console.log("MiNA 账号: ", jsonEncode(account, { prettier: true }));
   }
   account = await MiIOT.getDevice(account as any);
   if (Debugger.enableTrace) {
-    console.log("MiIOT Account: ", jsonEncode(account, { prettier: true }));
+    console.log("MiIOT 账号: ", jsonEncode(account, { prettier: true }));
   }
   if (account.did && !account.device) {
     console.error("找不到设备：" + account.did);
+    console.log("请检查你的设备名称是否正确，注意错别字、字母大小写和空格。");
     return undefined;
   }
   return account;
@@ -98,10 +102,10 @@ async function _getServiceToken(pass: MiPass): Promise<string | undefined> {
 
   let cookies = res.headers["set-cookie"] ?? [];
   for (let cookie of cookies) {
-    if (cookie.includes("serviceToken")) {
+    if (cookie?.includes("serviceToken")) {
       return cookie.split(";")[0].replace("serviceToken=", "");
     }
   }
-  console.error("_getServiceToken failed", res);
+  console.error("获取 Mi Service Token 失败", res);
   return undefined;
 }
