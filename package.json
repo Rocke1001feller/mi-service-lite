@@ -2,7 +2,7 @@
   "name": "mi-service-lite",
   "version": "2.4.0",
   "type": "module",
-  "description": "XiaoMi Cloud Service for mi.com",
+  "description": "Unofficial Node.js client for XiaoMi Cloud Service.",
   "license": "MIT",
   "author": {
     "name": "Del Wang",

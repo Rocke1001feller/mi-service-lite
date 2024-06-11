@@ -1,6 +1,6 @@
-# MiService
+# Mi Service Lite
 
-XiaoMi Cloud Service for mi.com
+Unofficial Node.js client for XiaoMi Cloud Service.
 
 ## ⚡️ Installation
 

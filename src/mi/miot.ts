@@ -17,14 +17,14 @@ export class MiIOT {
     if (account.sid !== "xiaomiio") {
       return account;
     }
-    const res = await this.__callMiIOT(account, "POST", "/home/device_list", {
+    const devices = await this.__callMiIOT(account, "POST", "/home/device_list", {
       getVirtualModel: false,
       getHuamiDevices: 0,
     });
     if (Debugger.enableTrace) {
-      console.log("MiIOT getDevice: ", jsonEncode(res, { prettier: true }));
+      console.log("MiIOT 设备列表: ", jsonEncode(devices, { prettier: true }));
     }
-    const device = (res?.list ?? []).find((e: any) =>
+    const device = (devices?.list ?? []).find((e: any) =>
       [e.did, e.name].includes(account.did)
     );
     if (device) {
