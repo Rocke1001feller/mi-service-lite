@@ -1,19 +1,16 @@
 import { assert } from "console";
-import { getMiIOT, getMiNA } from "../src/index";
+import { MiServiceConfig, getMiIOT, getMiNA } from "../src/index";
 
 import { MiNA } from "../src/mi/mina";
 import { MiIOT } from "../src/mi/miot";
 import { sleep } from "../src/utils/base";
 
 async function main() {
-  const config: any = {
+  const miServices = await getMiServices({
     userId: process.env.MI_USER!,
     password: process.env.MI_PASS!,
     did: process.env.MI_DID,
-    tts: "xiaoai",
-  };
-
-  const miServices = await getMiServices(config);
+  });
   // await testGetDevices(miServices);
   // await testSpeakerStatus(miServices);
   // await testPlayPause(miServices);
@@ -75,7 +72,7 @@ async function testGetDevices(miServices: MiServices) {
   console.log("MiIOT devices", await MiIOT.getDevices());
 }
 
-async function getMiServices(config: any): Promise<MiServices> {
+async function getMiServices(config: MiServiceConfig): Promise<MiServices> {
   const MiNA = await getMiNA(config);
   const MiIOT = await getMiIOT(config);
   assert(MiNA != undefined, "❌ getMiNA failed");
@@ -90,7 +87,7 @@ async function testGetMessages(miServices: MiServices) {
       // 测试自动刷新 token
       MiNA.account.serviceToken = "666";
     }
-    let messages = await MiNA.getConversations();
+    let messages = await MiNA?.getConversations();
     console.log(messages);
   }
   console.log("✅ Finished!");

@@ -8,7 +8,6 @@ import { jsonEncode } from "./json";
 
 const _baseConfig: CreateAxiosDefaults = {
   proxy: false,
-  timeout: 3 * 1000,
   decompress: true,
   headers: {
     "Accept-Encoding": "gzip, deflate",
@@ -73,6 +72,9 @@ _http.interceptors.response.use(
 );
 
 class HTTPClient {
+  // 默认 3 秒超时
+  timeout = 3 * 1000;
+
   async get<T = any>(
     url: string,
     query?:
@@ -118,6 +120,9 @@ class HTTPClient {
           )
           .join(" "),
       };
+    }
+    if (config && !config.timeout) {
+      config.timeout = Http.timeout; // 默认超时时间为 3 秒
     }
     return config;
   };
