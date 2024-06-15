@@ -118,7 +118,7 @@ export function decodeMiIOT(
   }
   const res = jsonDecode(decrypted.toString());
   if (!res) {
-    console.error("decodeMiIOT failed", error);
+    console.error("❌ decodeMiIOT failed", error);
   }
   return Promise.resolve(res);
 }

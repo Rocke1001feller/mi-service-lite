@@ -4,6 +4,7 @@ import { Debugger } from "./debug";
 import { sleep } from "./base";
 import { getMiService } from "../mi";
 import { MiAccount } from "../mi/types";
+import { jsonEncode } from "./json";
 
 const _baseConfig: CreateAxiosDefaults = {
   proxy: false,
@@ -46,20 +47,28 @@ _http.interceptors.response.use(
     if (newResult) {
       return newResult;
     }
-    const error = err.response?.data?.error ?? err.response?.data ?? err;
-    const apiError: HttpError = {
-      error: err,
-      isError: true,
-      code: error.code ?? "UNKNOWN CODE",
-      message: error.message ?? "UNKNOWN ERROR",
+    const error = err.response?.data?.error || err.response?.data;
+    const request = {
+      method: err.config.method,
+      url: err.config.url,
+      headers: jsonEncode(err.config.headers),
+      data: jsonEncode({ body: err.config.data }),
     };
-    console.error(
-      "❌ Network request failed:",
-      apiError.code,
-      apiError.message,
-      error
-    );
-    return apiError;
+    const response = !err.response
+      ? undefined
+      : {
+          url: err.config.url,
+          status: err.response.status,
+          headers: jsonEncode(err.response.headers),
+          data: jsonEncode({ body: err.response.data }),
+        };
+    return {
+      isError: true,
+      code: error?.code || err.response?.status || err.code || "未知",
+      message:
+        error?.message || err.response?.statusText || err.message || "未知",
+      error: { request, response },
+    };
   }
 );
 
@@ -125,7 +134,7 @@ class TokenRefresher {
   async refreshTokenAndRetry(err: any, maxRetry = 3) {
     const isMina = err?.config?.url?.includes("mina.mi.com");
     const isMIoT = err?.config?.url?.includes("io.mi.com");
-    if ((!isMina && !isMIoT) || err.response.status !== 401) {
+    if ((!isMina && !isMIoT) || err.response?.status !== 401) {
       return;
     }
     if (this.isRefreshing) {

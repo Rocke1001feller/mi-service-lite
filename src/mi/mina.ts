@@ -26,7 +26,10 @@ export class MiNA {
       "/admin/v2/device_list"
     );
     if (Debugger.enableTrace) {
-      console.log("MiNA 设备列表: ", jsonEncode(devices, { prettier: true }));
+      console.log(
+        "🐛 MiNA 设备列表: ",
+        jsonEncode(devices, { prettier: true })
+      );
     }
     const device = (devices ?? []).find((e: any) =>
       [e.deviceID, e.miotDID, e.name, e.alias].includes(account.did)
@@ -69,7 +72,9 @@ export class MiNA {
       res = await Http.post(url, encodeQuery(data), config);
     }
     if (res.code !== 0) {
-      console.error("_callMina failed", res);
+      if (Debugger.enableTrace) {
+        console.error("❌ _callMina failed", res);
+      }
       return undefined;
     }
     return res.data;
@@ -213,7 +218,9 @@ export class MiNA {
       }
     );
     if (res.code !== 0) {
-      console.error("getConversations failed", res);
+      if (Debugger.enableTrace) {
+        console.error("❌ getConversations failed", res);
+      }
       return undefined;
     }
     return jsonDecode(res.data);

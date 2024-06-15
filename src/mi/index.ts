@@ -29,7 +29,7 @@ export async function getMiService(config: {
     sid: service === "miiot" ? "xiaomiio" : "micoapi",
   };
   if (!account.userId || !account.password) {
-    console.error("Missing userId or password.");
+    console.error("❌ 没有找到账号或密码，请检查是否已配置相关参数：userId, password");
     return;
   }
   account = await getAccount(account);

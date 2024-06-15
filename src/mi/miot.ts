@@ -28,7 +28,10 @@ export class MiIOT {
       }
     );
     if (Debugger.enableTrace) {
-      console.log("MiIOT 设备列表: ", jsonEncode(devices, { prettier: true }));
+      console.log(
+        "🐛 MiIOT 设备列表: ",
+        jsonEncode(devices, { prettier: true })
+      );
     }
     const device = (devices?.list ?? []).find((e: any) =>
       [e.did, e.name].includes(account.did)
@@ -77,7 +80,9 @@ export class MiIOT {
       res = await Http.post(url, encodeQuery(data as any), config);
     }
     if (typeof res.data !== "string") {
-      console.error("_callMiIOT failed", res);
+      if (Debugger.enableTrace) {
+        console.error("❌ _callMiIOT failed", res);
+      }
       return undefined;
     }
     res = await decodeMiIOT(
