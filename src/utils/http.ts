@@ -1,9 +1,13 @@
 import axios, { AxiosRequestConfig, CreateAxiosDefaults } from "axios";
 import { isNotEmpty } from "./is";
+import { Debugger } from "./debug";
+import { sleep } from "./base";
+import { getMiService } from "../mi";
+import { MiAccount } from "../mi/types";
 
 const _baseConfig: CreateAxiosDefaults = {
   proxy: false,
-  timeout: 10 * 1000,
+  timeout: 3 * 1000,
   decompress: true,
   headers: {
     "Accept-Encoding": "gzip, deflate",
@@ -23,20 +27,25 @@ interface HttpError {
 }
 
 type RequestConfig = AxiosRequestConfig<any> & {
+  account?: MiAccount;
+  setAccount?: (newAccount: any) => void;
   rawResponse?: boolean;
   cookies?: Record<string, string | number | boolean | undefined>;
 };
 
 _http.interceptors.response.use(
-  (res) => {
-    const config: any = res.config;
-    if (config.rawResponse) {
+  (res: any) => {
+    if (res.config.rawResponse) {
       return res;
     }
     return res.data;
   },
-  (err) => {
-    // todo auto re-login（maxRetry=3）
+  async (err) => {
+    // 401 登录凭证过期后，自动刷新 token
+    const newResult = await tokenRefresher.refreshTokenAndRetry(err);
+    if (newResult) {
+      return newResult;
+    }
     const error = err.response?.data?.error ?? err.response?.data ?? err;
     const apiError: HttpError = {
       error: err,
@@ -67,8 +76,8 @@ class HTTPClient {
       query = undefined;
     }
     return _http.get<T>(
-      HTTPClient._buildURL(url, query),
-      HTTPClient._buildConfig(config)
+      HTTPClient.buildURL(url, query),
+      HTTPClient.buildConfig(config)
     ) as any;
   }
 
@@ -77,10 +86,10 @@ class HTTPClient {
     data?: any,
     config?: RequestConfig
   ): Promise<T | HttpError> {
-    return _http.post<T>(url, data, HTTPClient._buildConfig(config)) as any;
+    return _http.post<T>(url, data, HTTPClient.buildConfig(config)) as any;
   }
 
-  private static _buildURL = (url: string, query?: Record<string, any>) => {
+  static buildURL = (url: string, query?: Record<string, any>) => {
     const _url = new URL(url);
     for (const [key, value] of Object.entries(query ?? {})) {
       if (isNotEmpty(value)) {
@@ -90,7 +99,7 @@ class HTTPClient {
     return _url.href;
   };
 
-  private static _buildConfig = (config?: RequestConfig) => {
+  static buildConfig = (config?: RequestConfig) => {
     if (config?.cookies) {
       config.headers = {
         ...config.headers,
@@ -106,3 +115,82 @@ class HTTPClient {
 }
 
 export const Http = new HTTPClient();
+
+class TokenRefresher {
+  isRefreshing = false;
+
+  /**
+   * 自动刷新过期的凭证，并重新发送请求
+   */
+  async refreshTokenAndRetry(err: any, maxRetry = 3) {
+    const isMina = err?.config?.url?.includes("mina.mi.com");
+    const isMIoT = err?.config?.url?.includes("io.mi.com");
+    if ((!isMina && !isMIoT) || err.response.status !== 401) {
+      return;
+    }
+    if (this.isRefreshing) {
+      return;
+    }
+    let result: any;
+    this.isRefreshing = true;
+    let newServiceAccount = undefined;
+    for (let i = 0; i < maxRetry; i++) {
+      if (Debugger.enableTrace) {
+        console.log(`❌ 登录凭证已过期，正在尝试刷新 Token ${i + 1}`);
+      }
+      newServiceAccount = await this.refreshToken(err);
+      if (newServiceAccount) {
+        // 刷新成功，重新请求
+        result = await this.retry(err, newServiceAccount);
+        break;
+      }
+      // 隔 3 秒后重试
+      await sleep(3000);
+    }
+    this.isRefreshing = false;
+    if (!newServiceAccount) {
+      console.error("❌ 刷新登录凭证失败，请检查账号密码是否仍然有效。");
+    }
+    return result;
+  }
+
+  /**
+   * 刷新登录凭证并同步到本地
+   */
+  async refreshToken(err: any) {
+    const isMina = err?.config?.url?.includes("mina.mi.com");
+    const account: any = (
+      await getMiService({ service: isMina ? "mina" : "miiot", relogin: true })
+    )?.account;
+    if (account && err.config.account) {
+      // 更新登录凭证
+      for (const key in account) {
+        err.config.account[key] = account[key];
+      }
+      err.config.setAccount(err.config.account);
+    }
+    return account;
+  }
+
+  /**
+   * 重新请求
+   */
+  async retry(err: any, account: any) {
+    // 更新 cookies
+    const cookies = err.config.cookies ?? {};
+    for (const key of ["serviceToken"]) {
+      if (cookies[key] && account[key]) {
+        cookies[key] = account[key];
+      }
+    }
+    for (const key of ["deviceSNProfile"]) {
+      if (cookies[key] && account.device[key]) {
+        cookies[key] = account.device[key];
+      }
+    }
+    // 重新请求
+    return _http(HTTPClient.buildConfig(err.config)!);
+  }
+}
+
+const tokenRefresher = new TokenRefresher();

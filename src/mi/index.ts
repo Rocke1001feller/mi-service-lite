@@ -13,26 +13,26 @@ const kConfigFile = ".mi.json";
 
 export async function getMiService(config: {
   service: "miiot" | "mina";
-  userId: string;
-  password: string;
+  userId?: string;
+  password?: string;
   did?: string;
+  relogin?: boolean;
 }) {
-  const { service, userId, password, did } = config;
-  if (!userId || !password) {
+  const { service, userId, password, did, relogin } = config;
+  const overrides: any = relogin ? {} : { did, userId, password };
+  const randomDeviceId = "android_" + uuid();
+  const store: Store = (await readJSON(kConfigFile)) ?? {};
+  let account = {
+    deviceId: randomDeviceId,
+    ...store[service],
+    ...overrides,
+    sid: service === "miiot" ? "xiaomiio" : "micoapi",
+  };
+  if (!account.userId || !account.password) {
     console.error("Missing userId or password.");
     return;
   }
-  const randomDeviceId = "android_" + uuid();
-  let account: MiAccount | undefined;
-  const store: Store = (await readJSON(kConfigFile)) ?? {};
-  account = await getAccount({
-    deviceId: randomDeviceId,
-    ...store[service],
-    did,
-    userId,
-    password,
-    sid: service === "miiot" ? "xiaomiio" : "micoapi",
-  });
+  account = await getAccount(account);
   if (!account?.serviceToken || !account.pass?.ssecurity) {
     return undefined;
   }

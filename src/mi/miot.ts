@@ -1,4 +1,5 @@
 import { decodeMiIOT, encodeMiIOT, encodeQuery } from "../utils/codec";
+import { updateMiAccount } from "./common";
 import { Debugger } from "../utils/debug";
 import { Http } from "../utils/http";
 import { jsonEncode } from "../utils/json";
@@ -17,10 +18,15 @@ export class MiIOT {
     if (account.sid !== "xiaomiio") {
       return account;
     }
-    const devices = await this.__callMiIOT(account, "POST", "/home/device_list", {
-      getVirtualModel: false,
-      getHuamiDevices: 0,
-    });
+    const devices = await this.__callMiIOT(
+      account,
+      "POST",
+      "/home/device_list",
+      {
+        getVirtualModel: false,
+        getHuamiDevices: 0,
+      }
+    );
     if (Debugger.enableTrace) {
       console.log("MiIOT 设备列表: ", jsonEncode(devices, { prettier: true }));
     }
@@ -41,6 +47,8 @@ export class MiIOT {
   ) {
     const url = "https://api.io.mi.com/app" + path;
     const config = {
+      account,
+      setAccount: updateMiAccount(account),
       rawResponse: true,
       validateStatus: () => true,
       headers: {

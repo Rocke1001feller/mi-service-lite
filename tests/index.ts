@@ -14,11 +14,12 @@ async function main() {
   };
 
   const miServices = await getMiServices(config);
-  await testGetDevices(miServices);
+  // await testGetDevices(miServices);
   // await testSpeakerStatus(miServices);
   // await testPlayPause(miServices);
   // await testVolume(miServices);
   // await testPlayAudio(miServices);
+  await testGetMessages(miServices);
 }
 
 main();
@@ -80,4 +81,17 @@ async function getMiServices(config: any): Promise<MiServices> {
   assert(MiNA != undefined, "❌ getMiNA failed");
   assert(MiIOT != undefined, "❌ getMiIOT failed");
   return { MiNA, MiIOT } as any;
+}
+
+async function testGetMessages(miServices: MiServices) {
+  const { MiNA } = miServices;
+  for (let i = 0; i < 3; i++) {
+    if (i === 1) {
+      // 测试自动刷新 token
+      MiNA.account.serviceToken = "666";
+    }
+    let messages = await MiNA.getConversations();
+    console.log(messages);
+  }
+  console.log("✅ Finished!");
 }

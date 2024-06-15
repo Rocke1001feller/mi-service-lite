@@ -1,5 +1,6 @@
 import { clamp } from "../utils/base";
 import { encodeQuery } from "../utils/codec";
+import { updateMiAccount } from "./common";
 import { Debugger } from "../utils/debug";
 import { uuid } from "../utils/hash";
 import { Http } from "../utils/http";
@@ -49,6 +50,8 @@ export class MiNA {
     };
     const url = "https://api2.mina.mi.com" + path;
     const config = {
+      account,
+      setAccount: updateMiAccount(account),
       headers: { "User-Agent": "MICO/AndroidApp/@SHIP.TO.2A2FE0D7@/2.4.40" },
       cookies: {
         userId: account.userId,
@@ -195,6 +198,8 @@ export class MiNA {
         hardware: this.account.device?.hardware,
       },
       {
+        account: this.account,
+        setAccount: updateMiAccount(this.account),
         headers: {
           "User-Agent":
             "Mozilla/5.0 (Linux; Android 10; 000; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/119.0.6045.193 Mobile Safari/537.36 /XiaoMi/HybridView/ micoSoundboxApp/i appVersion/A_2.4.40",
