@@ -57,6 +57,16 @@ export interface MiAccount {
   device?: MinaDevice | MiIOTDevice; // 根据 did 查找到的 deviceInfo
 }
 
+// LLM 文本回应
+interface AnswerLLM {
+  bitSet: [number, number, number, number];
+  type: "LLM";
+  llm: {
+    bitSet: [number, number];
+    text: string;
+  };
+}
+
 // TTS 文本回应
 interface AnswerTTS {
   bitSet: [number, number, number, number];
@@ -82,7 +92,7 @@ interface AnswerAudio {
   };
 }
 
-type Answer = AnswerTTS | AnswerAudio;
+type Answer = AnswerLLM | AnswerTTS | AnswerAudio;
 
 /**
  * 已经执行了的动作（比如调节音量等），answer 为空
