@@ -9,7 +9,7 @@ interface Store {
   miiot?: MiAccount;
   mina?: MiAccount;
 }
-const kConfigFile = ".mi.json";
+
 
 export async function getMiService(config: {
   service: "miiot" | "mina";
@@ -21,6 +21,7 @@ export async function getMiService(config: {
   const { service, userId, password, did, relogin } = config;
   const overrides: any = relogin ? {} : { did, userId, password };
   const randomDeviceId = "android_" + uuid();
+  const kConfigFile = `.mi.${userId}.json`;
   const store: Store = (await readJSON(kConfigFile)) ?? {};
   let account = {
     deviceId: randomDeviceId,
